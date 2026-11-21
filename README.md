@@ -1,6 +1,6 @@
-# Basquete Gouveia Play
+# Basquete Stats PRO
 
-Central de análise esportiva para NBA, futebol e tênis: placar ao vivo, calendário completo, resultados históricos e estatísticas de todos os mercados. Os dados são reais e vêm da ESPN.
+Central de análise esportiva para basquete (NBA), futebol e tênis. Inclui calendário por modalidade, resultados anteriores, placares ao vivo, detalhes das partidas e estatísticas históricas. A cobertura depende dos dados que a ESPN disponibiliza para cada liga e partida; percentuais exibidos são históricos, não garantias nem previsões.
 
 ## Estrutura
 
