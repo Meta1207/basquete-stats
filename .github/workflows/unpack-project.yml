@@ -1,0 +1,29 @@
+name: Expand Basquete Stats source
+on:
+  push:
+    branches: [main]
+    paths:
+      - basquete-gouveia-play.zip
+permissions:
+  contents: write
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Extract application files
+        run: |
+          unzip -o basquete-gouveia-play.zip -d .
+          rm basquete-gouveia-play.zip
+      - name: Commit extracted project with original folders
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Add Basquete Gouveia Play source with folder structure"
+            git push
+          fi
