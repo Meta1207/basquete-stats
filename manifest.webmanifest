@@ -1,0 +1,11 @@
+{
+  "name": "Basquete Gouveia Play",
+  "short_name": "Gouveia Play",
+  "description": "Central de análise esportiva: NBA, futebol e tênis.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#04060b",
+  "theme_color": "#04060b",
+  "lang": "pt-BR",
+  "icons": [{ "src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
