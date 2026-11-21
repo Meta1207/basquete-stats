@@ -1,7 +1,7 @@
 {
-  "name": "Basquete Gouveia Play",
-  "short_name": "Gouveia Play",
-  "description": "Central de análise esportiva: NBA, futebol e tênis.",
+  "name": "Basquete Stats PRO",
+  "short_name": "Stats PRO",
+  "description": "Central de análise esportiva: basquete, futebol e tênis.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#04060b",
