@@ -75,9 +75,54 @@ async function renderHome(){
     el.innerHTML = fin.length? fin.slice(0,4).map(miniRow).join('') : `<div class="empty">Sem resultados recentes nesta competição.</div>`;
     bindGames(el);
   }).catch(e=>{ const el=document.getElementById('hres'); if(el) el.innerHTML=errBox(e); });
-  renderFavCard(document.getElementById('hstat'));
+  if(sk==='nba') renderFavCard(document.getElementById('hstat'));
+  else renderSportSummaryCard(document.getElementById('hstat'), sk, lg, lgName);
   updateLivePill();
 }
+/* Resumo por modalidade: evita mostrar estatísticas de NBA quando futebol/tênis estiver selecionado. */
+async function renderSportSummaryCard(el, sk, lg, lgName){
+  const days=14, now=new Date();
+  const title=sk==='futebol'?'Indicadores do futebol':'Indicadores do tênis';
+  el.innerHTML=`<div class="ch">${ic('bars')}<h3>${title} <small>(últimos ${days} dias)</small></h3></div>${skel(3)}`;
+  paintIcons(el);
+  try{
+    const list=(await getGames(sk,lg,addDays(now,-days),now)).filter(m=>m.completed).sort((a,b)=>b.date-a.date);
+    if(!list.length) throw new Error('não há partidas encerradas no período');
+    let tiles=[];
+    if(sk==='futebol'){
+      const goals=list.map(m=>(m.home.score||0)+(m.away.score||0));
+      const avg=(goals.reduce((a,b)=>a+b,0)/goals.length).toFixed(2);
+      const pct=fn=>Math.round(list.filter(fn).length/list.length*100)+'%';
+      tiles=[
+        ['Partidas',list.length],
+        ['Média de gols',avg],
+        ['Over 2.5',pct(m=>(m.home.score||0)+(m.away.score||0)>2.5)],
+        ['Ambas marcam',pct(m=>(m.home.score||0)>0&&(m.away.score||0)>0)]
+      ];
+    }else{
+      const games=list.map(m=>(m.home.lines||[]).reduce((s,x)=>s+(x.v||0),0)+(m.away.lines||[]).reduce((s,x)=>s+(x.v||0),0));
+      const sets=list.map(m=>Math.max((m.home.lines||[]).length,(m.away.lines||[]).length));
+      const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1):'-';
+      const pct=fn=>Math.round(list.filter(fn).length/list.length*100)+'%';
+      tiles=[
+        ['Partidas',list.length],
+        ['Média de games',avg(games)],
+        ['Média de sets',avg(sets)],
+        ['3+ sets',pct(m=>Math.max(m.home.lines.length,m.away.lines.length)>=3)]
+      ];
+    }
+    el.innerHTML=`<div class="ch">${ic('bars')}<h3>${title} <small>(${esc(lgName)})</small></h3></div>
+      <div class="tiles">${tiles.map(([k,v])=>`<div class="tile"><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('')}</div>
+      <div class="dim" style="font-size:11px;margin-top:8px">Indicadores históricos calculados a partir das partidas encerradas disponíveis na ESPN; não são previsões.</div>
+      <div class="more"><button class="link" id="sportMore">Ver estatísticas completas ${ic('right')}</button></div>`;
+    el.querySelector('#sportMore').addEventListener('click',()=>go('estatisticas'));
+    paintIcons(el);
+  }catch(e){
+    el.innerHTML=`<div class="ch">${ic('bars')}<h3>${title}</h3></div><div class="empty">Não foi possível montar o resumo de ${esc(lgName)} agora (${esc(e.message)}). Consulte Calendário e Resultados para ver as partidas disponíveis.</div>`;
+    paintIcons(el);
+  }
+}
+
 async function renderFavCard(el){
   const fp=S.favPlayer;
   el.innerHTML=`<div class="ch">${ic('bars')}<h3>Principais Estatísticas <small>(Últimos 5 jogos)</small></h3></div>${skel(2)}`;
