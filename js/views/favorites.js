@@ -43,8 +43,8 @@ async function renderFavorites(){
   const date=startOfDay(V.dataset.favDate ? new Date(V.dataset.favDate+'T12:00:00') : new Date());
   V.dataset.favDate=isoLocal(date);
   V.innerHTML=`<div class="card glow">
-    <div class="ch">${ic('trophy')}<h3>Mercado de Clubes</h3><span class="sp"></span><button class="iconbtn" id="favRefresh">${ic('refresh')}</button></div>
-    <p class="mut" style="font-size:13px;margin:-4px 0 12px">Clubes favoritos identificados pelas odds publicadas pela ESPN. Faixa de odds: 1,20 a 1,30.</p>
+    <div class="ch">${ic('trophy')}<h3>Radar de Favoritos</h3><span class="sp"></span><button class="iconbtn" id="favRefresh">${ic('refresh')}</button></div>
+    <p class="mut" style="font-size:13px;margin:-4px 0 12px">Jogos do dia com favorito identificado por odds publicadas pela ESPN. Faixa selecionada: 1,20 a 1,30.</p>
     <div class="row" style="margin-bottom:12px"><button class="iconbtn" id="favPrev">${ic('left')}</button><input type="date" class="sel" id="favDate" value="${isoLocal(date)}" style="flex:1"><button class="iconbtn" id="favNext">${ic('right')}</button><button class="btn ghost sm" id="favToday">Hoje</button></div>
     <div id="favResults">${skel(6)}</div>
   </div>`;
