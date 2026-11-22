@@ -6,8 +6,8 @@ import { bindGames, remember, skel } from '../ui/components.js';
 import { ic, paintIcons } from '../ui/icons.js';
 import { addDays, esc, fmtDay, fmtTime, isoLocal, startOfDay } from '../utils.js';
 
-const TARGET_MIN = 1.15;
-const TARGET_MAX = 1.35;
+const TARGET_MIN = 1.20;
+const TARGET_MAX = 1.30;
 const SPORT_ORDER = ['tenis','futebol','nba'];
 
 function decimalOdds(american){
@@ -44,7 +44,7 @@ async function renderFavorites(){
   V.dataset.favDate=isoLocal(date);
   V.innerHTML=`<div class="card glow">
     <div class="ch">${ic('trophy')}<h3>Radar de Favoritos</h3><span class="sp"></span><button class="iconbtn" id="favRefresh">${ic('refresh')}</button></div>
-    <p class="mut" style="font-size:13px;margin:-4px 0 12px">Jogos do dia com favorito identificado por odds publicadas pela ESPN. Faixa selecionada: 1,15 a 1,35.</p>
+    <p class="mut" style="font-size:13px;margin:-4px 0 12px">Jogos do dia com favorito identificado por odds publicadas pela ESPN. Faixa selecionada: 1,20 a 1,30.</p>
     <div class="row" style="margin-bottom:12px"><button class="iconbtn" id="favPrev">${ic('left')}</button><input type="date" class="sel" id="favDate" value="${isoLocal(date)}" style="flex:1"><button class="iconbtn" id="favNext">${ic('right')}</button><button class="btn ghost sm" id="favToday">Hoje</button></div>
     <div id="favResults">${skel(6)}</div>
   </div>`;
@@ -78,7 +78,7 @@ async function renderFavorites(){
       // Mantém os cards ligados ao detalhe do jogo por um elemento de clique acessível.
       html+=`<div class="games" style="display:none">${games.map(g=>`<div class="g" data-gid="${esc(g.id)}"></div>`).join('')}</div>`;
     }else{
-      html+=`<div class="empty">${section.total?'Nenhum jogo com odds publicadas na faixa 1,15–1,35.':'Nenhum jogo encontrado nesta data.'}</div>`;
+      html+=`<div class="empty">${section.total?'Nenhum jogo com odds publicadas na faixa 1,20–1,30.':'Nenhum jogo encontrado nesta data.'}</div>`;
     }
     html+='</div>';
   }
