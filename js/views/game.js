@@ -225,7 +225,7 @@ async function raceXSection(m){
     if(Array.isArray(sum?.plays?.allPlays)) return sum.plays.allPlays;
     return [];
   };
-  const inspectGame=(sum)=>{
+  const inspectGame=(sum,game)=>{
     const plays=getPlays(sum);
     if(!plays.length) return null;
     let homeScore=0, awayScore=0, hasCumulative=false;
@@ -238,12 +238,12 @@ async function raceXSection(m){
       } else if(p.scoringPlay || p.scoreValue!=null){
         const tid=String(p.team?.id||p.teamId||p.competitor?.id||'');
         const value=num(p.scoreValue)||0;
-        if(tid===String(m.home.id)) homeScore+=value;
-        else if(tid===String(m.away.id)) awayScore+=value;
+        if(tid===String(game.home.id)) homeScore+=value;
+        else if(tid===String(game.away.id)) awayScore+=value;
       } else continue;
       for(const n of thresholds){
-        if(first[n]===null && homeScore>=n){ first[n]='home'; times[n]=clockMinutes(p); }
-        if(first[n]===null && awayScore>=n){ first[n]='away'; times[n]=clockMinutes(p); }
+        if(first[n]===null && homeScore>=n){ first[n]=String(game.home.id); times[n]=clockMinutes(p); }
+        if(first[n]===null && awayScore>=n){ first[n]=String(game.away.id); times[n]=clockMinutes(p); }
       }
       if(thresholds.every(n=>first[n]!==null)) break;
     }
@@ -270,7 +270,7 @@ async function raceXSection(m){
     }
     const records={home:[],away:[]};
     for(const item of summaries){
-      const race=inspectGame(item.sum);
+      const race=inspectGame(item.sum,item.g);
       if(!race) continue;
       for(const side of ['home','away']){
         const teamId=String(m[side].id);
@@ -279,7 +279,7 @@ async function raceXSection(m){
           records[side].push({
             first:thresholds.reduce((o,n)=>{
               const winner=race.first[n];
-              o[n]=winner===ownSide?1:winner===null?null:0;
+              o[n]=winner===teamId?1:winner===null?null:0;
               return o;
             },{}),
             times:thresholds.reduce((o,n)=>{
