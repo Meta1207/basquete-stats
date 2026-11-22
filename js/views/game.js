@@ -391,9 +391,8 @@ function probBar(items){
 function handicapMarketSection(m,sum,unit){
   const title=unit==='pontos'?'Handicap de pontos':unit==='gols'?'Handicap de gols':'Handicap de games';
   const lines=[0.5,1.5,2.5,3.5,4.5];
-  return `<div class="section"><h4>${ic('swords')}${title}</h4>
-    <div class="market-grid">${lines.map(n=>`<div class="market-tile"><b>${m.home.short}</b><strong>-${n}</strong><span>${m.away.short} +${n}</span></div>`).join('')}</div>
-  </div>`;
+  const options=lines.flatMap(n=>[[`${m.home.short} -${n}`,`-${n}`],[`${m.away.short} +${n}`,`+${n}`]]);
+  return `<div class="section"><h4>${ic('swords')}${title}</h4>${marketTiles(options)}</div>`;
 }
 function favSection(m,sum){
   const pc=sum?.pickcenter?.[0];
