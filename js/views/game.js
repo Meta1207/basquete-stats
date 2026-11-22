@@ -395,7 +395,7 @@ function handicapMarketSection(m,sum,unit){
   const title=unit==='pontos'?'Handicap de pontos':unit==='gols'?'Handicap de gols':'Handicap de games';
   if(spread==null) return `<div class="section"><h4>${ic('swords')}${title}</h4><div class="dim" style="font-size:13px">A fonte não publicou uma linha de handicap para esta partida. Não será estimada uma cotação.</div></div>`;
   const homeLine=Number(spread), awayLine=-homeLine;
-  const margin=(m.home.score||0)-(m.away.score||0);
+  const margin=unit==='games'?m.home.lines.reduce((s,l)=>s+(l.v||0),0)-m.away.lines.reduce((s,l)=>s+(l.v||0),0):(m.home.score||0)-(m.away.score||0);
   const covered=m.completed?(margin+homeLine>0?m.home.short:margin+homeLine<0?m.away.short:'Empate / devolução'):null;
   return `<div class="section"><h4>${ic('swords')}${title}</h4>${marketTiles([
     [m.home.short,homeLine>0?'+'+homeLine:String(homeLine),m.completed?(covered===m.home.short?'Cobriu o handicap':covered==='Empate / devolução'?'Devolvida':'Não cobriu'):'Linha publicada pela fonte'],
