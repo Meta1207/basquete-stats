@@ -11,10 +11,10 @@ import { clearTeams } from '../views/home.js';
 /* =========================================================
    CONFIGURAÇÕES
    ========================================================= */
-function applyTheme(){ document.body.classList.toggle('theme-azul', S.theme==='azul'); }
+function applyTheme(){ ['azul','verde','preto'].forEach(theme=>document.body.classList.toggle('theme-'+theme,S.theme===theme)); }
 function renderConfig(){
   V.innerHTML=`<div class="card glow"><div class="ch">${ic('gear')}<h3>Configurações</h3></div>
-    <div class="setrow"><div><b>Cor principal</b><p>Identidade visual do aplicativo</p></div><div class="sw"><button data-th="laranja" class="${S.theme==='laranja'?'on':''}" style="background:#ff8a1f" title="Laranja"></button><button data-th="azul" class="${S.theme==='azul'?'on':''}" style="background:#2f8cff" title="Azul"></button></div></div>
+    <div class="setrow"><div><b>Cor principal</b><p>Identidade visual do aplicativo</p></div><div class="sw"><button data-th="laranja" class="${S.theme==='laranja'?'on':''}" style="background:#ff8a1f" title="Laranja"></button><button data-th="azul" class="${S.theme==='azul'?'on':''}" style="background:#2f8cff" title="Azul"></button><button data-th="verde" class="${S.theme==='verde'?'on':''}" style="background:#22c55e" title="Verde"></button><button data-th="preto" class="${S.theme==='preto'?'on':''}" style="background:#090909;border:1px solid #777" title="Preto"></button></div></div>
     <div class="setrow"><div><b>Esporte padrão</b><p>Abre o app neste esporte</p></div>${sportSelect('cfgSp')}</div>
     <div class="setrow"><div><b>Liga de futebol padrão</b><p>Usada no Início, Ao vivo e Totais</p></div><select class="sel" id="cfgFut">${SPORTS.futebol.leagues.map(l=>`<option value="${l.id}" ${S.league.futebol===l.id?'selected':''}>${esc(l.name)}</option>`).join('')}</select></div>
     <div class="setrow"><div><b>Circuito de tênis padrão</b></div><select class="sel" id="cfgTen">${SPORTS.tenis.leagues.map(l=>`<option value="${l.id}" ${S.league.tenis===l.id?'selected':''}>${l.name}</option>`).join('')}</select></div>
