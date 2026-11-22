@@ -7,6 +7,7 @@ import { renderResults } from './views/results.js';
 import { renderConfig } from './views/settings.js';
 import { renderStats } from './views/stats.js';
 import { renderTotals } from './views/totals.js';
+import { renderFavorites } from './views/favorites.js';
 
 /* =========================================================
    NAVEGAÇÃO
@@ -18,16 +19,16 @@ function go(view, opts={}){
   clearInterval(S.liveTimer);
   window.scrollTo({top:0,behavior:'smooth'});
   syncTabs();
-  ({inicio:renderHome, calendario:renderCalendar, resultados:renderResults, estatisticas:renderStats, config:renderConfig, aovivo:renderLive, totais:renderTotals})[view]();
+  ({inicio:renderHome, calendario:renderCalendar, resultados:renderResults, estatisticas:renderStats, config:renderConfig, aovivo:renderLive, totais:renderTotals, favoritos:renderFavorites})[view]();
 }
 function syncTabs(){
-  const active = S.view==='aovivo'?'aovivo':S.view==='totais'?'totais':S.sport;
+  const active = S.view==='aovivo'?'aovivo':S.view==='totais'?'totais':S.view==='favoritos'?'favoritos':S.sport;
   document.querySelectorAll('#tabs .tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===active));
 }
 document.querySelectorAll('#bot button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
 document.querySelectorAll('#tabs .tab').forEach(t=>t.addEventListener('click',()=>{
   const k=t.dataset.tab;
-  if(k==='aovivo'||k==='totais') return go(k);
+  if(k==='aovivo'||k==='totais'||k==='favoritos') return go(k);
   S.sport=k; store.set('sport',k);
   go(['calendario','resultados','estatisticas'].includes(S.view)?S.view:'inicio');
 }));
