@@ -259,10 +259,11 @@ async function raceXSection(m){
       .filter(g=>g.completed && String(g.id)!==String(m.id))
       .sort((a,b)=>b.date-a.date)
       .map(g=>[String(g.id),g])).values()];
-    const relevant=candidates.filter(g=>
-      String(g.home.id)===String(m.home.id)||String(g.away.id)===String(m.home.id)||
-      String(g.home.id)===String(m.away.id)||String(g.away.id)===String(m.away.id)
-    );
+    const forTeam=teamId=>candidates.filter(g=>
+      String(g.home.id)===String(teamId)||String(g.away.id)===String(teamId)
+    ).slice(0,10);
+    const relevant=[...new Map([...forTeam(m.home.id),...forTeam(m.away.id)]
+      .map(g=>[String(g.id),g])).values()];
     const summaries=[];
     for(let i=0;i<relevant.length;i+=5){
       const batch=await Promise.all(relevant.slice(i,i+5).map(g=>getSummary(g).then(sum=>({g,sum})).catch(()=>null)));
