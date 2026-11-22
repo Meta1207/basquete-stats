@@ -143,6 +143,8 @@ function nbaDetail(m,sum){
       ['Diferença (margem)',Math.abs((m.home.score||0)-(m.away.score||0))],
       ['1º tempo (total)',H.length>=2?half:null], ['2º tempo (total)',H.length>=4?tot-half:null],
       ['1º quarto (total)',H.length?(H[0]+A[0]):null],
+      ['Vencedor do 1º tempo',H.length>=2 && A.length>=2 && (m.completed || /halftime|half time|interval|3rd|4th|ot|final|encerrado/i.test(m.detail||'')) ? ((H[0]+H[1])>(A[0]+A[1])?m.home.short:(A[0]+A[1])>(H[0]+H[1])?m.away.short:'Empate') : null,
+        H.length>=2 && A.length>=2 && (m.completed || /halftime|half time|interval|3rd|4th|ot|final|encerrado/i.test(m.detail||'')) ? `1º tempo: ${H[0]+H[1]} × ${A[0]+A[1]}` : 'Aguardando fechamento do 2º quarto'],
       [`${m.home.short} pontos`,m.home.score],[`${m.away.short} pontos`,m.away.score],
       ['Prorrogação',H.length>4?'Sim':'Não']
     ])}</div>`;
