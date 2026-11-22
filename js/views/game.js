@@ -132,7 +132,7 @@ function parseNbaPlayers(sum){
 }
 const NBA_COLS=['MIN','PTS','REB','AST','3PM','STL','BLK','TO','PRA','P+R','P+A','R+A','S+B','FG','3PT','FT','+/-'];
 function nbaDetail(m,sum){
-  let h='';
+  let h=handicapMarketSection(m,sum,'pontos');
   const tot=(m.home.score||0)+(m.away.score||0);
   if(m.state!=='pre'){
     const H=m.home.lines.map(l=>l.v||0), A=m.away.lines.map(l=>l.v||0);
@@ -222,7 +222,7 @@ function bindTables(root){
 
 /* --- Futebol: gols, escanteios, cartões e demais mercados --- */
 function soccerDetail(m,sum){
-  let h='';
+  let h=handicapMarketSection(m,sum,'gols');
   const bt=sum?.boxscore?.teams||[];
   const ord = bt.length===2 ? (String(bt[0].team?.id)===String(m.home.id)?bt:[bt[1],bt[0]]) : [];
   const sv=(t,n)=>num((t?.statistics||[]).find(s=>s.name===n)?.displayValue);
@@ -315,13 +315,14 @@ function soccerDetail(m,sum){
 
 /* --- Tênis: sets, games, tiebreaks, aces quando disponíveis --- */
 function tennisDetail(m,sum){
-  if(m.state==='pre') return `<div class="section"><h4>${ic('swords')}Confronto direto e forma recente</h4><button class="btn ghost sm" data-th2h>Carregar confrontos e últimos jogos (12 meses)</button><div id="th2h"></div></div>`;
+  const handicap=handicapMarketSection(m,sum,'games');
+  if(m.state==='pre') return handicap+`<div class="section"><h4>${ic('swords')}Confronto direto e forma recente</h4><button class="btn ghost sm" data-th2h>Carregar confrontos e últimos jogos (12 meses)</button><div id="th2h"></div></div>`;
   const H=m.home.lines.map(l=>l.v||0), A=m.away.lines.map(l=>l.v||0);
   const gH=H.reduce((a,b)=>a+b,0), gA=A.reduce((a,b)=>a+b,0);
   const isTB=i=>m.home.lines[i]?.tb!=null||m.away.lines[i]?.tb!=null||(H[i]===7&&A[i]===6)||(H[i]===6&&A[i]===7);
   const tbs=H.filter((_,i)=>isTB(i)).length;
   const setW=i=>H[i]>A[i]?m.home.short:A[i]>H[i]?m.away.short:'-';
-  let h=`<div class="section"><h4>${ic('bars')}Mercados da partida</h4>${marketTiles([
+  let h=handicap+`<div class="section"><h4>${ic('bars')}Mercados da partida</h4>${marketTiles([
     ['Vencedor',m.home.winner?m.home.short:m.away.winner?m.away.short:'-'],
     ['Placar em sets',`${m.home.score}–${m.away.score}`],
     ['Total de games',gH+gA], ['Total de sets',H.length],
@@ -386,6 +387,21 @@ function probBar(items){
   const cols=['var(--acc)','#64748b','#94a3b8'];
   return `<div style="display:flex;height:30px;border-radius:10px;overflow:hidden;margin:6px 0">${items.map((x,i)=>`<div style="width:${x[1]/tot*100}%;background:${cols[i]};display:grid;place-items:center;font-weight:800;font-size:13px;color:${i===0?'#061021':'#fff'};white-space:nowrap;overflow:hidden">${Math.round(x[1]/tot*100)}%</div>`).join('')}</div>
   <div style="display:flex;justify-content:space-between;font-size:13px" class="mut">${items.map(x=>`<span>${esc(x[0])}</span>`).join('')}</div>`;
+}
+function handicapMarketSection(m,sum,unit){
+  const pc=sum?.pickcenter?.[0];
+  const odds=(m.odds?.spread!=null)?m.odds:(pc?parseOdds(pc,m.home,m.away):m.odds);
+  const spread=odds?.spread;
+  const title=unit==='pontos'?'Handicap de pontos':unit==='gols'?'Handicap de gols':'Handicap de games';
+  if(spread==null) return `<div class="section"><h4>${ic('swords')}${title}</h4><div class="dim" style="font-size:13px">A fonte não publicou uma linha de handicap para esta partida. Não será estimada uma cotação.</div></div>`;
+  const homeLine=Number(spread), awayLine=-homeLine;
+  const margin=(m.home.score||0)-(m.away.score||0);
+  const covered=m.completed?(margin+homeLine>0?m.home.short:margin+homeLine<0?m.away.short:'Empate / devolução'):null;
+  return `<div class="section"><h4>${ic('swords')}${title}</h4>${marketTiles([
+    [m.home.short,homeLine>0?'+'+homeLine:String(homeLine),m.completed?(covered===m.home.short?'Cobriu o handicap':covered==='Empate / devolução'?'Devolvida':'Não cobriu'):'Linha publicada pela fonte'],
+    [m.away.short,awayLine>0?'+'+awayLine:String(awayLine),m.completed?(covered===m.away.short?'Cobriu o handicap':covered==='Empate / devolução'?'Devolvida':'Não cobriu'):'Linha oposta'],
+    ['Fonte',odds.provider||'ESPN']
+  ])}</div>`;
 }
 function favSection(m,sum){
   const pc=sum?.pickcenter?.[0];
