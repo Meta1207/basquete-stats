@@ -208,46 +208,149 @@ function nbaDetail(m,sum){
 /* --- Corrida X: análise da pontuação inicial com base nos últimos jogos --- */
 async function raceXSection(m){
   if(m.sk!=='nba') return '';
+  const thresholds=[10,15,20];
+  const pct=(n,d)=>d?Math.round(n/d*100):null;
+  const clockMinutes=play=>{
+    const raw=play.clock?.displayValue||play.clock?.value||play.clock||'';
+    const mt=String(raw).match(/(\\d{1,2}):(\\d{2})/);
+    if(!mt) return null;
+    const period=Number(play.period?.number||play.periodNumber||1);
+    const remaining=Number(mt[1])+Number(mt[2])/60;
+    return Math.max(0,(period-1)*12+(12-remaining));
+  };
+  const getPlays=sum=>{
+    if(Array.isArray(sum?.plays)) return sum.plays;
+    if(Array.isArray(sum?.plays?.items)) return sum.plays.items;
+    if(Array.isArray(sum?.scoringPlays)) return sum.scoringPlays;
+    if(Array.isArray(sum?.plays?.allPlays)) return sum.plays.allPlays;
+    return [];
+  };
+  const inspectGame=(sum)=>{
+    const plays=getPlays(sum);
+    if(!plays.length) return null;
+    let homeScore=0, awayScore=0, hasCumulative=false;
+    const first={10:null,15:null,20:null}, times={10:null,15:null,20:null};
+    for(const p of plays){
+      const hs=num(p.homeScore??p.homeTeamScore??p.score?.home);
+      const as=num(p.awayScore??p.awayTeamScore??p.score?.away);
+      if(hs!=null && as!=null){
+        homeScore=hs; awayScore=as; hasCumulative=true;
+      } else if(p.scoringPlay || p.scoreValue!=null){
+        const tid=String(p.team?.id||p.teamId||p.competitor?.id||'');
+        const value=num(p.scoreValue)||0;
+        if(tid===String(m.home.id)) homeScore+=value;
+        else if(tid===String(m.away.id)) awayScore+=value;
+      } else continue;
+      for(const n of thresholds){
+        if(first[n]===null && homeScore>=n){ first[n]='home'; times[n]=clockMinutes(p); }
+        if(first[n]===null && awayScore>=n){ first[n]='away'; times[n]=clockMinutes(p); }
+      }
+      if(thresholds.every(n=>first[n]!==null)) break;
+    }
+    if(!hasCumulative && homeScore===0 && awayScore===0) return null;
+    return {first,times};
+  };
   try{
-    const [hs,as] = await Promise.all([
+    const [homeSchedule,awaySchedule]=await Promise.all([
       getTeamSchedule('nba',m.lg,m.home.id).catch(()=>[]),
       getTeamSchedule('nba',m.lg,m.away.id).catch(()=>[])
     ]);
-    const firstQuarter = (games, team) => games
-      .filter(g=>g.completed)
+    const candidates=[...new Map([...homeSchedule,...awaySchedule]
+      .filter(g=>g.completed && String(g.id)!==String(m.id))
       .sort((a,b)=>b.date-a.date)
-      .map(g=>{
-        const own = String(g.home.id)===String(team.id) ? g.home : g.away;
-        return own.lines?.[0]?.v;
-      })
-      .filter(v=>v!=null && Number.isFinite(Number(v)))
-      .slice(0,10)
-      .map(Number);
-    const H=firstQuarter(hs,m.home), A=firstQuarter(as,m.away);
-    if(H.length<3 || A.length<3) return `<div class="section"><h4>${ic('zap')}Corrida X · análise</h4><div class="dim" style="font-size:13px">Ainda não há jogos recentes suficientes com pontuação por quarto para montar uma análise confiável.</div></div>`;
-    const avg=x=>x.reduce((s,v)=>s+v,0)/x.length;
-    const hAvg=avg(H), aAvg=avg(A), total=hAvg+aAvg;
-    const hShare=total?Math.round(hAvg/total*100):50, aShare=100-hShare;
-    const leader=hAvg>aAvg?m.home:hAvg<aAvg?m.away:null;
-    const thresholds=[10,15,20];
-    const rows=thresholds.map(n=>{
-      const hm=hAvg>0?n/(hAvg/12):null, am=aAvg>0?n/(aAvg/12):null;
-      const likely=hm==null?m.away:am==null?m.home:hm<am?m.home:am<hm?m.away:null;
-      const time=likely===m.home?hm:likely===m.away?am:null;
-      return [`Corrida aos ${n} pontos`,likely?likely.short:'Equilíbrio',time!=null?`Tempo teórico: ${time.toFixed(1)} min`:'Sem projeção'];
+      .map(g=>[String(g.id),g])).values()];
+    const relevant=candidates.filter(g=>
+      String(g.home.id)===String(m.home.id)||String(g.away.id)===String(m.home.id)||
+      String(g.home.id)===String(m.away.id)||String(g.away.id)===String(m.away.id)
+    );
+    const summaries=[];
+    for(let i=0;i<relevant.length;i+=5){
+      const batch=await Promise.all(relevant.slice(i,i+5).map(g=>getSummary(g).then(sum=>({g,sum})).catch(()=>null)));
+      summaries.push(...batch.filter(Boolean));
+    }
+    const records={home:[],away:[]};
+    for(const item of summaries){
+      const race=inspectGame(item.sum);
+      if(!race) continue;
+      for(const side of ['home','away']){
+        const teamId=String(m[side].id);
+        if(String(item.g.home.id)===teamId || String(item.g.away.id)===teamId){
+          const ownSide=String(item.g.home.id)===teamId?'home':'away';
+          records[side].push({
+            first:thresholds.reduce((o,n)=>{
+              const winner=race.first[n];
+              o[n]=winner===ownSide?1:winner===null?null:0;
+              return o;
+            },{}),
+            times:thresholds.reduce((o,n)=>{
+              const winner=race.first[n];
+              o[n]=winner===ownSide?race.times[n]:null;
+              return o;
+            },{})
+          });
+        }
+      }
+    }
+    const teamStats=side=>thresholds.map(n=>{
+      const valid=records[side].filter(r=>r.first[n]!==null);
+      const wins=valid.filter(r=>r.first[n]===1).length;
+      const times=records[side].map(r=>r.times[n]).filter(v=>v!=null);
+      return {n,total:valid.length,wins,pct:pct(wins,valid.length),avgTime:times.length?times.reduce((a,b)=>a+b,0)/times.length:null};
     });
-    return `<div class="section"><h4>${ic('zap')}Corrida X · análise</h4>
-      <div class="dim" style="font-size:12px;margin-bottom:10px">Quem tende a chegar primeiro a 10, 15 ou 20 pontos? Estimativa baseada na média de pontos do 1º quarto dos últimos jogos disponíveis.</div>
-      ${marketTiles([
-        [`Média 1ºQ · ${m.home.short}`,hAvg.toFixed(1),`${H.length} jogos analisados`],
-        [`Média 1ºQ · ${m.away.short}`,aAvg.toFixed(1),`${A.length} jogos analisados`],
-        ['Participação inicial',`${hShare}% × ${aShare}%`,`${m.home.short} × ${m.away.short}`],
-        ...rows
-      ])}
-      <div class="dim" style="font-size:12px;margin-top:8px">Análise estatística, não cotação nem resultado confirmado. O tempo é uma projeção linear a partir da média do 1º quarto; a ordem real de chegada exige dados lance a lance, que a fonte pode não disponibilizar.</div>
+    const H=teamStats('home'), A=teamStats('away');
+    const card=(team,stat)=>`<div class="racex-option">
+      <div class="racex-team">${img(team.logo)}<b>${esc(team.short)}</b></div>
+      <div class="racex-percent">${stat.pct==null?'—':stat.pct+'%'}</div>
+      <div class="racex-meta">${stat.total?stat.wins+'/'+stat.total+' jogos':'Sem dados suficientes'}</div>
+      <div class="racex-track"><span style="width:${stat.pct??0}%"></span></div>
+    </div>`;
+    const blocks=thresholds.map((n,i)=>`<div class="racex-market">
+      <div class="racex-market-title"><span>Primeiro a ${n} pontos</span><span class="racex-tag">CORRIDA ${n}</span></div>
+      <div class="racex-options">${card(m.home,H[i])}${card(m.away,A[i])}</div>
+      <div class="racex-insight">${(()=>{
+        const h=H[i].pct,a=A[i].pct;
+        if(h==null||a==null) return 'Histórico insuficiente para apontar uma tendência.';
+        if(Math.abs(h-a)<10) return 'Confronto equilibrado no histórico analisado.';
+        return h>a?`Maior frequência histórica: ${esc(m.home.short)}.`:`Maior frequência histórica: ${esc(m.away.short)}.`;
+      })()}</div>
+    </div>`).join('');
+    const allGames=Math.max(...[records.home.length,records.away.length,0]);
+    const timeLine=thresholds.map((n,i)=>{
+      const ht=H[i].avgTime, at=A[i].avgTime;
+      return `<div class="racex-time-row"><span>${n} pontos</span><b>${ht==null?'—':ht.toFixed(1)+' min'}</b><b>${at==null?'—':at.toFixed(1)+' min'}</b></div>`;
+    }).join('');
+    return `<div class="section racex-section">
+      <div class="racex-heading"><div><h4>${ic('zap')}Corrida X · análise estatística</h4><div class="racex-subtitle">Qual equipe costuma alcançar a marca primeiro?</div></div><span class="racex-tag">ANÁLISE</span></div>
+      <style>
+        .racex-section .racex-subtitle{font-size:12px;color:var(--mut);margin-top:3px}
+        .racex-section .racex-tag{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--acc);background:color-mix(in srgb,var(--acc) 13%,transparent);padding:6px 9px;border-radius:20px;white-space:nowrap}
+        .racex-market{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}
+        .racex-market-title{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:14px;margin-bottom:10px}
+        .racex-options{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+        .racex-option{background:var(--surface2,var(--card2));border-radius:11px;padding:10px;min-width:0}
+        .racex-team{display:flex;align-items:center;gap:6px;font-size:12px;min-width:0}
+        .racex-team img{width:22px;height:22px;object-fit:contain}
+        .racex-percent{font-size:23px;font-weight:850;margin-top:7px}
+        .racex-meta{font-size:10px;color:var(--mut);margin-top:1px}
+        .racex-track{height:5px;background:var(--line);border-radius:8px;overflow:hidden;margin-top:8px}
+        .racex-track span{display:block;height:100%;background:var(--acc);border-radius:8px}
+        .racex-insight{font-size:11px;color:var(--mut);margin-top:9px}
+        .racex-times{border:1px solid var(--line);border-radius:12px;padding:11px;margin-top:12px}
+        .racex-time-row{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px}
+        .racex-time-row:last-child{border:0}
+        .racex-time-row b{text-align:right}
+        @media(max-width:380px){.racex-options{grid-template-columns:1fr}}
+      </style>
+      ${blocks}
+      <div class="racex-times">
+        <b style="font-size:13px">Tempo médio para alcançar a marca</b>
+        <div class="racex-time-row" style="color:var(--mut)"><span>Meta</span><b>${esc(m.home.short)}</b><b>${esc(m.away.short)}</b></div>
+        ${timeLine}
+      </div>
+      <div class="racex-insight" style="margin-top:10px">Base: até 10 partidas recentes por equipe com sequência de pontuação disponível. Amostra efetiva: ${records.home.length} jogos de ${esc(m.home.short)} e ${records.away.length} de ${esc(m.away.short)}. Percentuais consideram somente partidas com dados válidos. Tempo calculado pelo relógio de jogo quando publicado pela fonte.</div>
     </div>`;
   }catch(e){
-    return `<div class="section"><h4>${ic('zap')}Corrida X · análise</h4><div class="dim" style="font-size:13px">Não foi possível carregar o histórico necessário para esta análise.</div></div>`;
+    return `<div class="section"><h4>${ic('zap')}Corrida X · análise estatística</h4><div class="dim" style="font-size:13px">Não foi possível carregar o histórico de pontuação necessário. Tente novamente mais tarde.</div></div>`;
   }
 }
 
