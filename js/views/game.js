@@ -143,8 +143,7 @@ function nbaDetail(m,sum){
       ['Diferença (margem)',Math.abs((m.home.score||0)-(m.away.score||0))],
       ['1º tempo (total)',H.length>=2?half:null], ['2º tempo (total)',H.length>=4?tot-half:null],
       ['1º quarto (total)',H.length?(H[0]+A[0]):null],
-      ['Vencedor do 1º tempo',H.length>=2 && A.length>=2 && (m.completed || /halftime|half time|interval|3rd|4th|ot|final|encerrado/i.test(m.detail||'')) ? ((H[0]+H[1])>(A[0]+A[1])?m.home.short:(A[0]+A[1])>(H[0]+H[1])?m.away.short:'Empate') : null,
-        H.length>=2 && A.length>=2 && (m.completed || /halftime|half time|interval|3rd|4th|ot|final|encerrado/i.test(m.detail||'')) ? `1º tempo: ${H[0]+H[1]} × ${A[0]+A[1]}` : 'Aguardando fechamento do 2º quarto'],
+
       [`${m.home.short} pontos`,m.home.score],[`${m.away.short} pontos`,m.away.score],
       ['Prorrogação',H.length>4?'Sim':'Não']
     ])}</div>`;
@@ -163,6 +162,24 @@ function nbaDetail(m,sum){
         ${H.length>=2?hcpGrid('Margem 1º tempo '+m.home.short,(H[0]+H[1])-(A[0]+A[1]),rng(-7.5,7.5,2.5).filter(x=>x%1!==0),m.home.short):''}
       </div>`;
     }
+  }
+  // Exibe o mercado em qualquer fase; odds específicas só quando a fonte as publicar.
+  {
+    const H=m.home.lines.map(l=>l.v??null), A=m.away.lines.map(l=>l.v??null);
+    const halfReady=H.length>=2 && A.length>=2 && H[0]!=null && H[1]!=null && A[0]!=null && A[1]!=null &&
+      (m.completed || /halftime|half time|interval|3rd|4th|ot|final|encerrado/i.test(m.detail||''));
+    const homeHalf=(H[0]||0)+(H[1]||0), awayHalf=(A[0]||0)+(A[1]||0);
+    const halfWinner=halfReady?(homeHalf>awayHalf?m.home.short:awayHalf>homeHalf?m.away.short:'Empate'):null;
+    const gameFavorite=m.odds?.fav==='home'?m.home:m.odds?.fav==='away'?m.away:null;
+    h+=`<div class="section"><h4>${ic('trophy')}Vencedor do 1º tempo</h4>
+      ${marketTiles([
+        ['Mercado','Vencedor do 1º tempo',m.state==='pre'?'Pré-jogo':m.state==='in'?'Partida em andamento':'Partida encerrada'],
+        ['Favorito indicado',gameFavorite?gameFavorite.short:'Não disponível',gameFavorite?'Favorito do jogo completo; não equivale a uma odd específica do 1º tempo':'A ESPN não indicou favorito para este confronto'],
+        ['Odd 1º tempo',null,'Não publicada pela fonte de dados'],
+        ['Resultado 1º tempo',halfWinner,halfReady?`Parcial: ${homeHalf} × ${awayHalf}`:'Será exibido quando o 2º quarto terminar']
+      ])}
+      <div class="dim" style="font-size:12px;margin-top:8px">A indicação de favorito é apenas referência do mercado de jogo completo. Não representa cotação nem garantia para o mercado de 1º tempo.</div>
+    </div>`;
   }
   const bt=sum?.boxscore?.teams;
   if(bt&&bt.length===2){
