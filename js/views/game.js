@@ -250,6 +250,22 @@ function soccerDetail(m,sum){
       ['Chutes no gol',add(oH,oA), oH!=null?`${oH} × ${oA}`:''],
       ['Impedimentos',add(sv(ord[0],'offsides'),sv(ord[1],'offsides'))]
     ])}</div>`;
+    const htGoals=hasKE?goals1T:null;
+    const goalMarkets=[
+      ['Over 0.5 HT',htGoals,'1º tempo'],
+      ['Over 0.5 FT',gH+gA,'tempo integral'],
+      ['Over 1.5 FT',gH+gA,'tempo integral'],
+      ['Over 2.5 FT',gH+gA,'tempo integral'],
+      ['Over 3.5 FT',gH+gA,'tempo integral'],
+      ['Over 4.5 FT',gH+gA,'tempo integral'],
+      ['Over 5.5 FT',gH+gA,'tempo integral']
+    ];
+    h+=`<div class="section"><h4>${ic('target')}Mercados de gols</h4>${marketTiles(goalMarkets.map(([label,goals,period])=>{
+      const line=Number(label.match(/[0-9.]+/)[0]);
+      const value=goals==null?'—':m.completed?(goals>line?'SIM':'NÃO'):'—';
+      const detail=goals==null?'Dados do 1º tempo indisponíveis':m.completed?`Resultado · ${goals} gol(s) ${period}`:m.state==='pre'?'Pré-jogo · odds não fornecidas pela fonte':`Parcial: ${goals} gol(s) · resultado em aberto`;
+      return [label,value,detail];
+    }))}</div>`;
     if(m.completed){
       h+=`<div class="section"><h4>${ic('list')}Linhas Over/Under — resultado</h4>
         ${ouGrid('Gols (total)',gH+gA,rng(0.5,5.5))}
