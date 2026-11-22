@@ -11,10 +11,11 @@ import { marketTiles, probBar, rng } from '../views/game.js';
    TOTAIS
    ========================================================= */
 async function renderTotals(){
+  const marketMode=S.view==='mercado-futebol'||S.view==='mercado-pontos';
   const sk=S.sport, lg=S.league[sk];
   const d=S.totDate||addDays(new Date(),-1); const span=S.totDays||1;
   V.innerHTML=`<div class="card glow"><div class="ch">${ic('bars')}<h3>Totais e linhas Over/Under</h3><span class="sp"></span></div>
-    <div class="row" style="margin-bottom:12px">${sportSelect()}${leagueSelect(sk)}<button class="iconbtn" id="pd">${ic('left')}</button><input type="date" class="sel" id="td" value="${isoLocal(d)}"><button class="iconbtn" id="nd">${ic('right')}</button>
+    <div class="row" style="margin-bottom:12px">${marketMode?'':sportSelect()}${leagueSelect(sk)}<button class="iconbtn" id="pd">${ic('left')}</button><input type="date" class="sel" id="td" value="${isoLocal(d)}"><button class="iconbtn" id="nd">${ic('right')}</button>
       <select class="sel" id="tdays">${[[1,'Somente o dia'],[3,'Últimos 3 dias'],[7,'Últimos 7 dias'],[15,'Últimos 15 dias'],[30,'Últimos 30 dias']].map(([v,t])=>`<option value="${v}" ${span==v?'selected':''}>${t}</option>`).join('')}</select></div>
     <div id="tt">${skel(5)}</div></div>`;
   paintIcons(V);
