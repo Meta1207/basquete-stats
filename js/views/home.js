@@ -15,25 +15,6 @@ import { getGamelog } from '../views/stats.js';
 async function renderHome(){
   const sk=S.sport, cfg=SPORTS[sk], lg=S.league[sk];
   const lgName = cfg.leagues.find(l=>l.id===lg)?.name || cfg.label;
-  const betLineHTML = isoLocal(new Date()) === '2026-11-22' ? `
-  <section class="card glow" style="margin:14px 0">
-    <div class="ch"><span class="reddot"></span><h3>Radar de Apostas · Linha do Dia</h3><span class="sp"></span><span class="tag">22/11/2026</span></div>
-    <p class="mut" style="font-size:13px;margin:-4px 0 12px">Três favoritos · uma seleção por modalidade · odds indicativas</p>
-    <div class="row" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)">
-      <div><b>⚽ Futebol · Ajax</b><div class="mut" style="font-size:13px">Ajax x ADO Den Haag · vitória do Ajax</div></div><b class="acc">1,02</b>
-    </div>
-    <div class="row" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)">
-      <div><b>🏀 Basquete · Flamengo</b><div class="mut" style="font-size:13px">Cearense x Flamengo · vitória do Flamengo</div></div><b class="acc">1,02</b>
-    </div>
-    <div class="row" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)">
-      <div><b>🎾 Tênis · Ann Li</b><div class="mut" style="font-size:13px">Ann Li x Dalma Galfi · vitória de Ann Li</div></div><b class="acc">1,20</b>
-    </div>
-    <div class="row" style="justify-content:space-between;margin-top:12px">
-      <div><span class="mut" style="font-size:13px">Odd combinada estimada</span><div class="mut" style="font-size:11px">1,02 × 1,02 × 1,20</div></div>
-      <strong style="font-size:26px;color:var(--ok)">1,25</strong>
-    </div>
-    <p class="mut" style="font-size:11px;margin-top:10px">Odds de referência, sujeitas a alteração. A seleção não garante resultado; confira os mercados e horários na sua casa antes de apostar.</p>
-  </section>` : '';
   S.homeDate = S.homeDate || {}; const hd = S.homeDate[sk] || startOfDay(new Date());
   V.innerHTML = `
   <section class="hero">
@@ -45,7 +26,6 @@ async function renderHome(){
       <div class="sugg" id="sugg"></div>
     </div>
   </section>
-  ${betLineHTML}
   <div class="grid3">
     <button class="feat" data-go="calendario">${ic('cal')}<h3>Calendário de Jogos</h3><p>Próximos, em andamento e jogos anteriores</p></button>
     <button class="feat" data-go="resultados">${ic('bars')}<h3>Resultados Anteriores</h3><p>Placar, estatísticas e desempenho por equipe</p></button>
