@@ -44,7 +44,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   h += favSection(m, sum);
-  if(m.sk==='nba') h += nbaDetail(m,sum);
+  if(m.sk==='nba') { h += nbaDetail(m,sum); h += await raceXSection(m); }
   else if(m.sk==='futebol') h += soccerDetail(m,sum);
   else h += tennisDetail(m,sum);
   h += h2hSection(m,sum);
@@ -205,6 +205,52 @@ function nbaDetail(m,sum){
   }
   return h;
 }
+/* --- Corrida X: análise da pontuação inicial com base nos últimos jogos --- */
+async function raceXSection(m){
+  if(m.sk!=='nba') return '';
+  try{
+    const [hs,as] = await Promise.all([
+      getTeamSchedule('nba',m.lg,m.home.id).catch(()=>[]),
+      getTeamSchedule('nba',m.lg,m.away.id).catch(()=>[])
+    ]);
+    const firstQuarter = (games, team) => games
+      .filter(g=>g.completed)
+      .sort((a,b)=>b.date-a.date)
+      .map(g=>{
+        const own = String(g.home.id)===String(team.id) ? g.home : g.away;
+        return own.lines?.[0]?.v;
+      })
+      .filter(v=>v!=null && Number.isFinite(Number(v)))
+      .slice(0,10)
+      .map(Number);
+    const H=firstQuarter(hs,m.home), A=firstQuarter(as,m.away);
+    if(H.length<3 || A.length<3) return `<div class="section"><h4>${ic('zap')}Corrida X · análise</h4><div class="dim" style="font-size:13px">Ainda não há jogos recentes suficientes com pontuação por quarto para montar uma análise confiável.</div></div>`;
+    const avg=x=>x.reduce((s,v)=>s+v,0)/x.length;
+    const hAvg=avg(H), aAvg=avg(A), total=hAvg+aAvg;
+    const hShare=total?Math.round(hAvg/total*100):50, aShare=100-hShare;
+    const leader=hAvg>aAvg?m.home:hAvg<aAvg?m.away:null;
+    const thresholds=[10,15,20];
+    const rows=thresholds.map(n=>{
+      const hm=hAvg>0?n/(hAvg/12):null, am=aAvg>0?n/(aAvg/12):null;
+      const likely=hm==null?m.away:am==null?m.home:hm<am?m.home:am<hm?m.away:null;
+      const time=likely===m.home?hm:likely===m.away?am:null;
+      return [`Corrida aos ${n} pontos`,likely?likely.short:'Equilíbrio',time!=null?`Tempo teórico: ${time.toFixed(1)} min`:'Sem projeção'];
+    });
+    return `<div class="section"><h4>${ic('zap')}Corrida X · análise</h4>
+      <div class="dim" style="font-size:12px;margin-bottom:10px">Quem tende a chegar primeiro a 10, 15 ou 20 pontos? Estimativa baseada na média de pontos do 1º quarto dos últimos jogos disponíveis.</div>
+      ${marketTiles([
+        [`Média 1ºQ · ${m.home.short}`,hAvg.toFixed(1),`${H.length} jogos analisados`],
+        [`Média 1ºQ · ${m.away.short}`,aAvg.toFixed(1),`${A.length} jogos analisados`],
+        ['Participação inicial',`${hShare}% × ${aShare}%`,`${m.home.short} × ${m.away.short}`],
+        ...rows
+      ])}
+      <div class="dim" style="font-size:12px;margin-top:8px">Análise estatística, não cotação nem resultado confirmado. O tempo é uma projeção linear a partir da média do 1º quarto; a ordem real de chegada exige dados lance a lance, que a fonte pode não disponibilizar.</div>
+    </div>`;
+  }catch(e){
+    return `<div class="section"><h4>${ic('zap')}Corrida X · análise</h4><div class="dim" style="font-size:13px">Não foi possível carregar o histórico necessário para esta análise.</div></div>`;
+  }
+}
+
 function bindTables(root){
   root.querySelectorAll('[data-sortable]').forEach(tw=>{
     const tb=tw.querySelector('tbody');
