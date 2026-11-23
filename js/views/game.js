@@ -39,7 +39,7 @@ async function pregameMarketsSection(m,sum){
   const status=hasOdds&&hasPred?'<span class="pregame-status '+(oddsFav&&predFav?(oddsFav===predFav?'agree':'diff'):'')+'">'+esc(agreement)+'</span>':'<span class="pregame-status">Dados parciais da ESPN</span>';
   return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Análise pré-jogo · mercados disponíveis</h4><p>Comparação das odds e projeções publicadas pela ESPN antes do início</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+status+'<div class="pregame-market-list">'+cards+'</div><p class="pregame-disclaimer">O painel mostra somente mercados e projeções efetivamente recebidos da ESPN. “Não disponibilizado” significa que a fonte não forneceu aquela linha; não é uma recomendação nem uma previsão inventada. Não há integração com uma IA externa independente nesta versão.</p></div>';
 }
-function openGame(m, keepScroll=false){
+async function openGame(m, keepScroll=false){
   clearInterval(modalTimer);
   const prevScroll = keepScroll ? sheet.scrollTop : 0;
   modal.classList.add('on'); document.body.style.overflow='hidden';
