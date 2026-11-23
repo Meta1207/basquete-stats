@@ -5,7 +5,7 @@ import { S } from '../state.js';
 import { bindGames, bindSportLeague, errBox, leagueSelect, remember, skel, sportSelect } from '../ui/components.js';
 import { ic, paintIcons } from '../ui/icons.js';
 import { addDays, esc, fmtDay, fmtTime, isoLocal, ymd } from '../utils.js';
-import { marketTiles, probBar, rng } from '../views/game.js';
+import { marketTiles, probBar, rng } from '../views/game.js?v=20261123b';
 
 /* =========================================================
    TOTAIS
