@@ -5,7 +5,7 @@ import { S, store } from '../state.js';
 import { bindGames, bindSportLeague, errBox, gamesList, img, leagueSelect, remember, skel, sportSelect, toast } from '../ui/components.js';
 import { ic, paintIcons } from '../ui/icons.js';
 import { addDays, esc, fmtDay, num } from '../utils.js';
-import { bindTables, marketTiles, pctCell } from '../views/game.js?v=20261123b';
+import { bindTables, marketTiles, pctCell } from '../views/game.js?v=20261124a';
 import { getTeams, setupSearch } from '../views/home.js';
 
 /* =========================================================
