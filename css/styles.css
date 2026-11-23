@@ -544,3 +544,12 @@ nav.bot button.on:before{
 .wp-extremes b{color:var(--txt)}
 .wp-help{font-size:10px;line-height:1.45;color:var(--dim);margin-top:10px}
 @media(max-width:420px){.wp-panel{padding:10px}.wp-team strong{font-size:27px}.wp-plot{height:150px}.wp-current{gap:5px;padding:10px 6px}.wp-team-name{font-size:11px}.wp-vs{font-size:8px}}
+
+.wp-periods{display:flex;gap:6px;overflow-x:auto;padding:2px 0 9px;scrollbar-width:none}
+.wp-periods::-webkit-scrollbar{display:none}
+.wp-period{flex:none;border:1px solid var(--line2);background:#0a172b;color:var(--mut);border-radius:999px;padding:7px 11px;font-size:10px;font-weight:800}
+.wp-period.on{background:var(--accSoft);border-color:var(--acc);color:var(--acc2)}
+.wp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+.wp-summary>div{padding:9px 6px;border-radius:10px;text-align:center;background:rgba(255,255,255,.035);border:1px solid rgba(100,132,180,.13);min-width:0}
+.wp-summary small{display:block;font-size:8px;letter-spacing:.35px;color:var(--dim);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp-summary b{display:block;margin-top:4px;font-size:19px;font-family:"Barlow Condensed",sans-serif}
