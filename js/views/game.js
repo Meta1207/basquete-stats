@@ -15,7 +15,31 @@ const modal=document.getElementById('modal'), sheet=document.getElementById('she
 modal.addEventListener('click',e=>{ if(e.target===modal) closeModal(); });
 let modalTimer=null;
 function closeModal(){ clearInterval(modalTimer); modal.classList.remove('on'); document.body.style.overflow=''; }
-async function openGame(m, keepScroll=false){
+async function pregameMarketsSection(m,sum){
+  if(m.state!=='pre') return '';
+  const pc=sum?.pickcenter?.[0];
+  const odds=m.odds&&(m.odds.hML!=null||m.odds.fav||m.odds.ou!=null||m.odds.spread!=null)?m.odds:(pc?parseOdds(pc,m.home,m.away):m.odds);
+  const pred=sum?.predictor;
+  const ph=num(pred?.homeTeam?.gameProjection),pa=num(pred?.awayTeam?.gameProjection);
+  const pHome=odds?implied(odds.hML):null,pAway=odds?implied(odds.aML):null,pDraw=odds?implied(odds.dML):null;
+  const oddsFav=odds?.fav==='home'?m.home:odds?.fav==='away'?m.away:(pHome!=null&&pAway!=null?(pHome>pAway?m.home:pAway>pHome?m.away:null):null);
+  const predFav=ph!=null&&pa!=null?(ph>pa?m.home:pa>ph?m.away:null):null;
+  const hasOdds=!!(odds&&(odds.hML!=null||odds.aML!=null||odds.spread!=null||odds.ou!=null||odds.dML!=null));
+  const hasPred=ph!=null&&pa!=null;
+  const agreement=oddsFav&&predFav?(oddsFav===predFav?'As fontes concordam': 'As fontes divergem'):'Comparação indisponível';
+  const pct=(v)=>v==null?'—':Math.round(v*100)+'%';
+  const marketRows=[
+    ['Vencedor / moneyline',oddsFav?oddsFav.short:'Sem odds publicadas',odds?.hML!=null||odds?.aML!=null?m.sk==='futebol'&&pDraw!=null?'1X2 · '+m.home.short+' '+pct(pHome)+' · Empate '+pct(pDraw)+' · '+m.away.short+' '+pct(pAway):m.home.short+' '+pct(pHome)+' · '+m.away.short+' '+pct(pAway):''],
+    ['Handicap / spread',odds?.spread!=null?m.home.short+' '+(odds.spread>0?'+':'')+odds.spread:'Não disponibilizado pela ESPN',odds?.spread!=null?'Linha publicada pela ESPN':'Sem linha para comparar'],
+    ['Total de pontos / gols',odds?.ou!=null?'Linha '+odds.ou:'Não disponibilizado pela ESPN',odds?.ou!=null?'Over / Under':'Sem linha para comparar'],
+    ...(m.sk==='futebol'?[['Empate',pDraw!=null?'Probabilidade '+pct(pDraw):'Não disponibilizado pela ESPN','Mercado 1X2']]:[]),
+    ['Projeção ESPN',hasPred?m.home.short+' '+ph+' · '+m.away.short+' '+pa:'Não disponibilizada','Projeção estatística pré-jogo']
+  ];
+  const cards=marketRows.map(([name,value,note])=>'<div class="pregame-market-row"><div><b>'+esc(name)+'</b><small>'+esc(note)+'</small></div><strong>'+esc(String(value))+'</strong></div>').join('');
+  const status=hasOdds&&hasPred?'<span class="pregame-status '+(oddsFav&&predFav?(oddsFav===predFav?'agree':'diff'):'')+'">'+esc(agreement)+'</span>':'<span class="pregame-status">Dados parciais da ESPN</span>';
+  return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Análise pré-jogo · mercados disponíveis</h4><p>Comparação das odds e projeções publicadas pela ESPN antes do início</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+status+'<div class="pregame-market-list">'+cards+'</div><p class="pregame-disclaimer">O painel mostra somente mercados e projeções efetivamente recebidos da ESPN. “Não disponibilizado” significa que a fonte não forneceu aquela linha; não é uma recomendação nem uma previsão inventada. Não há integração com uma IA externa independente nesta versão.</p></div>';
+}
+function openGame(m, keepScroll=false){
   clearInterval(modalTimer);
   const prevScroll = keepScroll ? sheet.scrollTop : 0;
   modal.classList.add('on'); document.body.style.overflow='hidden';
@@ -44,6 +68,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   h += favSection(m, sum);
+  h += pregameMarketsSection(m,sum);
   if(m.sk!=='nba') h += favoriteWinnerCard(m,sum);
   if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += nbaLiveAnalysisSection(m,sum); h += await raceXSection(m); }
   else if(m.sk==='futebol') h += soccerDetail(m,sum);
