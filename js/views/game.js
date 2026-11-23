@@ -44,6 +44,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   h += favSection(m, sum);
+  if(m.sk!=='nba') h += favoriteWinnerCard(m,sum);
   if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += nbaLiveAnalysisSection(m,sum); h += await raceXSection(m); }
   else if(m.sk==='futebol') h += soccerDetail(m,sum);
   else h += tennisDetail(m,sum);
@@ -226,7 +227,7 @@ function nbaDetail(m,sum){
   }
   return h;
 }
-function nbaFavoriteCard(m,sum){
+function favoriteWinnerCard(m,sum){
  const wp=Array.isArray(sum?.winprobability)?sum.winprobability:[];
  const raw=wp.length?num(wp[wp.length-1]?.homeWinPercentage):null;
  const hp=raw==null?null:Math.round(Math.max(0,Math.min(1,raw>1?raw/100:raw))*100),ap=hp==null?null:100-hp;
@@ -314,7 +315,7 @@ function nbaLiveAnalysisSection(m,sum){
   if(homePct!=null) insight.push(`Estimativa de vitória da ESPN: ${homePct}% para ${esc(m.home.short)} e ${awayPct}% para ${esc(m.away.short)}.`);
   const totalRecent=totals.home+totals.away;
   const homeWidth=totalRecent?totals.home/totalRecent*100:50,awayWidth=totalRecent?totals.away/totalRecent*100:50;
-  const favoriteCard=nbaFavoriteCard(m,sum);
+  const favoriteCard=favoriteWinnerCard(m,sum);
   const momentum=hasRecent?`<div class="nba-momentum-grid">
       <div class="nba-momentum-team"><span>${esc(m.home.short)}</span><b>${totals.home}</b><div class="nba-momentum-track"><i style="width:${homeWidth}%"></i></div></div>
       <div class="nba-momentum-team away"><span>${esc(m.away.short)}</span><b>${totals.away}</b><div class="nba-momentum-track"><i style="width:${awayWidth}%"></i></div></div>
