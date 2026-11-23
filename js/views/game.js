@@ -226,6 +226,22 @@ function nbaDetail(m,sum){
   }
   return h;
 }
+function nbaFavoriteCard(m,sum){
+ const wp=Array.isArray(sum?.winprobability)?sum.winprobability:[];
+ const raw=wp.length?num(wp[wp.length-1]?.homeWinPercentage):null;
+ const hp=raw==null?null:Math.round(Math.max(0,Math.min(1,raw>1?raw/100:raw))*100),ap=hp==null?null:100-hp;
+ const pc=sum?.pickcenter?.[0],odds=m.odds&&(m.odds.hML!=null||m.odds.fav)?m.odds:(pc?parseOdds(pc,m.home,m.away):m.odds);
+ const mh=odds?implied(odds.hML):null,ma=odds?implied(odds.aML):null;
+ const ph=num(sum?.predictor?.homeTeam?.gameProjection),pa=num(sum?.predictor?.awayTeam?.gameProjection);
+ let team=null,pct=null,source='';
+ if(m.state==='in'&&hp!=null){team=hp>50?m.home:hp<50?m.away:null;pct=team?(team===m.home?hp:ap):50;source='Probabilidade ao vivo ESPN';}
+ else if(m.state==='pre'&&mh!=null&&ma!=null&&mh+ma>0){team=mh>ma?m.home:ma>mh?m.away:null;pct=team?Math.round((team===m.home?mh:ma)/(mh+ma)*100):50;source='Probabilidade implícita das odds';}
+ else if(m.state==='pre'&&ph!=null&&pa!=null){team=ph>pa?m.home:pa>ph?m.away:null;pct=team?Math.round(Math.max(ph,pa)/(ph+pa||1)*100):50;source='Projeção pré-jogo ESPN';}
+ if(!team)return '<div class="nba-analysis-card"><div class="nba-analysis-title">Favorito para vencer</div><div class="nba-no-data">Dados insuficientes para apontar um favorito com segurança.</div></div>';
+ const label=pct>=75?'Favoritismo forte':pct>=60?'Favoritismo moderado':'Favoritismo leve';
+ const hd=hp!=null?hp+'%':mh!=null?Math.round(mh/(mh+ma||1)*100)+'%':'—',ad=ap!=null?ap+'%':ma!=null?Math.round(ma/(mh+ma||1)*100)+'%':'—';
+ return '<div class="nba-analysis-card nba-winner-card"><div class="nba-analysis-title">Favorito para vencer</div><div class="nba-winner-main"><div><small>MAIOR PROBABILIDADE</small><b>'+esc(team.name)+'</b><span>'+label+'</span></div><strong>'+pct+'%</strong></div><div class="nba-winner-track"><i style="width:'+pct+'%"></i></div><div class="nba-winner-meta"><span>'+esc(m.home.short)+' '+hd+'</span><span>'+esc(m.away.short)+' '+ad+'</span></div><p>'+source+'. Estimativa, não garantia de resultado.</p></div>';
+}
 function nbaLiveAnalysisSection(m,sum){
   if(m.sk!=='nba') return '';
   const homeId=String(m.home.id),awayId=String(m.away.id);
@@ -298,6 +314,7 @@ function nbaLiveAnalysisSection(m,sum){
   if(homePct!=null) insight.push(`Estimativa de vitória da ESPN: ${homePct}% para ${esc(m.home.short)} e ${awayPct}% para ${esc(m.away.short)}.`);
   const totalRecent=totals.home+totals.away;
   const homeWidth=totalRecent?totals.home/totalRecent*100:50,awayWidth=totalRecent?totals.away/totalRecent*100:50;
+  const favoriteCard=nbaFavoriteCard(m,sum);
   const momentum=hasRecent?`<div class="nba-momentum-grid">
       <div class="nba-momentum-team"><span>${esc(m.home.short)}</span><b>${totals.home}</b><div class="nba-momentum-track"><i style="width:${homeWidth}%"></i></div></div>
       <div class="nba-momentum-team away"><span>${esc(m.away.short)}</span><b>${totals.away}</b><div class="nba-momentum-track"><i style="width:${awayWidth}%"></i></div></div>
@@ -308,6 +325,7 @@ function nbaLiveAnalysisSection(m,sum){
   const timelineHtml=eventRows?`<div class="nba-timeline">${eventRows}</div>`:`<div class="nba-no-data">A linha do tempo de jogadas não foi publicada pela fonte para esta partida.</div>`;
   return `<div class="section nba-live-analysis">
     <div class="nba-analysis-heading"><div><h4>${ic('bars')}Central de análise ao vivo</h4><p>Indicadores calculados somente com os dados disponíveis da ESPN</p></div><span class="nba-analysis-tag">${m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO'}</span></div>
+    ${favoriteCard}
     <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('bars')}Momentum · últimos lances</div>${momentum}</div>
     <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('list')}Leitura automática da partida</div>${summary}</div>
     <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('list')}Linha do tempo · principais registros</div>${timelineHtml}</div>
