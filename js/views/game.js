@@ -237,29 +237,32 @@ function nbaLiveAnalysisSection(m,sum){
   const clock=p=>String(p.clock?.displayValue||p.clock?.value||p.clock||'').trim();
   const period=p=>Number(p.period?.number||p.periodNumber||p.period||0)||null;
   const description=p=>String(p.text||p.description||p.shortDescription||p.type?.text||p.type?.name||p.commentary||p.playText||'').trim();
-  let prevH=null,prevA=null;
+  let prevH=null,prevA=null,previousLeader=0;
   const events=[];
   for(const p of rawPlays){
     const hs=num(p.homeScore??p.homeTeamScore??p.score?.home);
     const as=num(p.awayScore??p.awayTeamScore??p.score?.away);
     const tid=teamId(p);
-    let points=num(p.scoreValue??p.points??p.pointsScored),scoringTeam=tid;
+    let points=num(p.scoreValue??p.points??p.pointsScored),scoringTeam=tid,leadChange=false;
     if(hs!=null&&as!=null){
       if(prevH!=null&&prevA!=null){
         const dh=hs-prevH,da=as-prevA;
         if(dh>0&&da<=0){points=dh;scoringTeam=homeId;}
         else if(da>0&&dh<=0){points=da;scoringTeam=awayId;}
         else if(dh>0&&da>0){points=null;scoringTeam='';}
-      }
+        const margin=hs-as;
+        if(margin!==0&&previousLeader!==0&&Math.sign(margin)!==previousLeader) leadChange=true;
+        if(margin!==0) previousLeader=Math.sign(margin);
+      } else if(hs!==as) previousLeader=Math.sign(hs-as);
       prevH=hs;prevA=as;
     }
     const text=description(p);
     const isScoring=points>0||p.scoringPlay===true||/made.*(three|2.?pt|free throw)|three.point.*made|layup.*made|dunk.*made/i.test(text);
     if(!isScoring&&hs==null&&!text) continue;
     const knownTeam=scoringTeam===homeId||scoringTeam===awayId;
-    events.push({team:knownTeam?scoringTeam:'',points:knownTeam&&points>0?points:null,hs,as,clock:clock(p),period:period(p),text:text||(isScoring?'Pontuação registrada':'Evento da partida'),scoring:isScoring});
+    events.push({team:knownTeam?scoringTeam:'',points:knownTeam&&points>0?points:null,hs,as,clock:clock(p),period:period(p),text:text||(isScoring?'Pontuação registrada':'Evento da partida'),scoring:isScoring,leadChange});
   }
-  const scoring=events.filter(e=>e.scoring&&e.team);
+  const scoring=events.filter(e=>e.scoring&&e.team&&e.points!=null);
   const recent=scoring.slice(-5),totals={home:0,away:0};
   recent.forEach(e=>{if(e.team===homeId)totals.home+=e.points||0;else if(e.team===awayId)totals.away+=e.points||0;});
   let runTeam='',runPoints=0,runPlays=0;
@@ -279,7 +282,7 @@ function nbaLiveAnalysisSection(m,sum){
   const eventRows=timeline.map(e=>{
     const team=e.team===homeId?m.home.short:e.team===awayId?m.away.short:'';
     const score=e.hs!=null&&e.as!=null?`${e.hs} × ${e.as}`:'';
-    return `<div class="nba-tl-row"><div class="nba-tl-time">${e.clock?esc(e.clock):periodName(e.period)}</div><div class="nba-tl-mark ${e.scoring?'score':''}"></div><div class="nba-tl-copy"><div><b>${team?esc(team)+' · ':''}${esc(e.text)}</b><small>${e.period?periodName(e.period):e.scoring?'PONTUAÇÃO':'EVENTO'}</small></div>${score?`<strong>${score}</strong>`:''}</div></div>`;
+    return `<div class="nba-tl-row"><div class="nba-tl-time">${e.clock?esc(e.clock):periodName(e.period)}</div><div class="nba-tl-mark ${e.leadChange?'turn':e.scoring?'score':''}"></div><div class="nba-tl-copy"><div><b>${team?esc(team)+' · ':''}${esc(e.text)}</b><small>${e.leadChange?'VIRADA NO PLACAR':e.period?periodName(e.period):e.scoring?'PONTUAÇÃO':'EVENTO'}</small></div>${score?`<strong>${score}</strong>`:''}</div></div>`;
   }).join('');
   const insight=[];
   if(leader) insight.push(`${esc(leader.short)} está à frente por ${Math.abs(currentLead)} ponto${Math.abs(currentLead)===1?'':'s'} no placar atual.`);
@@ -290,6 +293,8 @@ function nbaLiveAnalysisSection(m,sum){
     else insight.push(`Os últimos ${recent.length} lances pontuados estão equilibrados (${totals.home} × ${totals.away}).`);
     if(runTeam&&runPlays>=2) insight.push(`${esc(runTeam===homeId?m.home.short:m.away.short)} marcou em sequência nos últimos ${runPlays} lances pontuados consecutivos (${runPoints||'pontuação não detalhada'} pontos identificados).`);
   }
+  const leadChanges=events.filter(e=>e.leadChange).length;
+  if(leadChanges) insight.push(`A linha do tempo registra ${leadChanges} virada${leadChanges===1?'':'s'} de liderança no placar.`);
   if(homePct!=null) insight.push(`Estimativa de vitória da ESPN: ${homePct}% para ${esc(m.home.short)} e ${awayPct}% para ${esc(m.away.short)}.`);
   const totalRecent=totals.home+totals.away;
   const homeWidth=totalRecent?totals.home/totalRecent*100:50,awayWidth=totalRecent?totals.away/totalRecent*100:50;
@@ -302,10 +307,10 @@ function nbaLiveAnalysisSection(m,sum){
   const summary=insight.length?`<ul class="nba-insight-list">${insight.map(x=>`<li>${x}</li>`).join('')}</ul>`:`<div class="nba-no-data">Ainda não há dados suficientes para uma leitura automática desta partida.</div>`;
   const timelineHtml=eventRows?`<div class="nba-timeline">${eventRows}</div>`:`<div class="nba-no-data">A linha do tempo de jogadas não foi publicada pela fonte para esta partida.</div>`;
   return `<div class="section nba-live-analysis">
-    <div class="nba-analysis-heading"><div><h4>${ic('activity')}Central de análise ao vivo</h4><p>Indicadores calculados somente com os dados disponíveis da ESPN</p></div><span class="nba-analysis-tag">${m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO'}</span></div>
-    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('zap')}Momentum · últimos lances</div>${momentum}</div>
-    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('brain')}Leitura automática da partida</div>${summary}</div>
-    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('history')}Linha do tempo · principais registros</div>${timelineHtml}</div>
+    <div class="nba-analysis-heading"><div><h4>${ic('bars')}Central de análise ao vivo</h4><p>Indicadores calculados somente com os dados disponíveis da ESPN</p></div><span class="nba-analysis-tag">${m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO'}</span></div>
+    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('bars')}Momentum · últimos lances</div>${momentum}</div>
+    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('list')}Leitura automática da partida</div>${summary}</div>
+    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('list')}Linha do tempo · principais registros</div>${timelineHtml}</div>
     <div class="nba-analysis-foot">A leitura é descritiva, não preditiva. Jogadas, placares e probabilidades podem não estar disponíveis em todas as partidas; dados ausentes não são estimados.</div>
   </div>`;
 }
