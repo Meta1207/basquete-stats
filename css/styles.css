@@ -620,3 +620,14 @@ nav.bot button.on:before{
 .pregame-market-row small{display:block;color:var(--dim);font-size:9px;margin-top:3px;line-height:1.4}
 .pregame-market-row strong{font-size:11px;text-align:right;max-width:55%;overflow-wrap:anywhere}
 .pregame-disclaimer{font-size:9px;line-height:1.5;color:var(--dim);margin:9px 0 0}
+
+.pregame-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 2px;color:var(--dim);font-size:9px;font-weight:900;letter-spacing:.45px}
+.pregame-market-card{padding:11px 0;border-top:1px solid var(--line)}
+.pregame-market-card h5{margin:0 0 8px;font-size:12px}
+.pregame-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pregame-side{min-width:0;padding:9px;border-radius:10px;background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:5px}
+.pregame-side.own{border:1px solid rgba(34,197,94,.2)}
+.pregame-side.espn{border:1px solid rgba(59,130,246,.2)}
+.pregame-side small{font-size:8px;font-weight:900;letter-spacing:.5px;color:var(--dim)}
+.pregame-side b{font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.pregame-side span{font-size:9px;color:var(--mut);line-height:1.35}
