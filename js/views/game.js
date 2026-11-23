@@ -1,7 +1,7 @@
 // Basquete Gouveia Play — views/game.js
 import { SPORTS } from '../config.js';
 import { V } from '../router.js';
-import { getGames, getSummary, implied, memo, parseOdds } from '../services/espn.js';
+import { api, base, getGames, getSummary, implied, memo, parseOdds } from '../services/espn.js';
 import { S } from '../state.js';
 import { GAMECACHE, bindGames, errBox, gamesList, img, skel } from '../ui/components.js';
 import { ic, paintIcons } from '../ui/icons.js';
@@ -44,7 +44,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   h += favSection(m, sum);
-  if(m.sk==='nba') { h += nbaDetail(m,sum); h += await raceXSection(m); }
+  if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += await raceXSection(m); }
   else if(m.sk==='futebol') h += soccerDetail(m,sum);
   else h += tennisDetail(m,sum);
   h += h2hSection(m,sum);
@@ -111,6 +111,26 @@ const PT = { // tradução de estatísticas ESPN
   effectiveClearance:'Cortes certos', totalClearance:'Cortes'
 };
 
+/* --- NBA: escalação e disponibilidade dos jogadores --- */
+async function nbaAvailabilitySection(m,sum){
+  const teamIds=[String(m.home.id),String(m.away.id)];
+  const starters=(sum?.boxscore?.players||[]).map(group=>({teamId:String(group.team?.id||''),players:(group.statistics||[]).flatMap(stat=>(stat.athletes||[]).filter(row=>row.starter===true).map(row=>row.athlete||{}))}));
+  const confirmed=starters.filter(group=>group.players.length);
+  let injuryGroups=[];
+  const readInjuries=payload=>{const root=payload?.injuries;if(Array.isArray(root))return root;if(Array.isArray(root?.items))return root.items;if(Array.isArray(payload?.teams))return payload.teams;return [];};
+  try{injuryGroups=readInjuries(sum);if(!injuryGroups.length){const feed=await api(base('nba','nba')+'/injuries',{}, {ttl:90});injuryGroups=readInjuries(feed);}}catch(e){/* mantém a escalação disponível se o feed falhar */}
+  const injuryRows=[];
+  for(const group of injuryGroups){const tid=String(group.team?.id||group.id||'');if(!teamIds.includes(tid))continue;for(const item of (group.injuries||group.athletes||[])){const athlete=item.athlete||item;const rawStatus=item.status;const status=String(typeof rawStatus==='object'?(rawStatus?.name||rawStatus?.type||''):rawStatus||'').trim();injuryRows.push({teamId:tid,name:athlete.displayName||athlete.fullName||athlete.shortName||'Jogador',position:athlete.position?.abbreviation||'',status:status||'Status não informado',reason:item.type?.name||item.details||item.longComment||item.shortComment||''});}}
+  const unique=new Map();for(const row of injuryRows)unique.set(row.teamId+'-'+row.name,row);const injuries=[...unique.values()];
+  const statusGroup=status=>{const s=status.toLowerCase();if(/\bout\b|fora|inactive|suspended|suspenso/.test(s))return 'out';if(/doubtful|improvável/.test(s))return 'doubtful';if(/questionable|day.to.day|game.time.decision|dúvida/.test(s))return 'questionable';return 'other';};
+  const label=s=>s==='out'?'FORA':s==='doubtful'?'IMPROVÁVEL':s==='questionable'?'DÚVIDA':'INFORMADO';
+  const badge=s=>s==='out'?'bad':s==='doubtful'?'bad':s==='questionable'?'warn':'';
+  const renderTeam=side=>{const teamId=String(m[side].id);const group=confirmed.find(x=>x.teamId===teamId);const names=group?.players||[];return '<div class="availability-team"><div class="grp">'+esc(m[side].name)+'</div>'+(names.length?'<div class="availability-list">'+names.map(p=>'<div class="availability-player"><span>'+esc(p.displayName||p.fullName||'Jogador')+'</span><span class="tag ok">TITULAR</span></div>').join('')+'</div>':'<div class="dim" style="font-size:13px">Titulares ainda não confirmados pela ESPN.</div>')+'</div>';};
+  const renderInjuries=side=>{const teamId=String(m[side].id);const rows=injuries.filter(x=>x.teamId===teamId);if(!rows.length)return '<div class="dim" style="font-size:13px">Nenhum desfalque listado pela ESPN.</div>';return '<div class="availability-list">'+rows.map(row=>{const group=statusGroup(row.status);return '<div class="availability-player"><span><b>'+esc(row.name)+'</b>'+(row.position?' <small class="dim">'+esc(row.position)+'</small>':'')+(row.reason?'<small class="dim availability-reason">'+esc(row.reason)+'</small>':'')+'</span><span class="tag '+badge(group)+'">'+esc(label(group))+'</span></div>';}).join('')+'</div>';};
+  const updated=new Date();
+  const starterNote=confirmed.length?'Titulares exibidos somente quando a ESPN informa a escalação no box score.':'A ESPN ainda não publicou os titulares. Elenco e projeções não serão apresentados como escalação confirmada.';
+  return '<div class="section availability-section"><h4>'+ic('users')+'Escalações e desfalques</h4><div class="availability-subtitle">Titulares confirmados</div><div class="availability-grid">'+renderTeam('home')+renderTeam('away')+'</div><div class="dim availability-note">'+starterNote+'</div><div class="availability-subtitle" style="margin-top:12px">Lesionados e situação para o jogo</div><div class="availability-grid"><div class="availability-team"><div class="grp">'+esc(m.home.short)+'</div>'+renderInjuries('home')+'</div><div class="availability-team"><div class="grp">'+esc(m.away.short)+'</div>'+renderInjuries('away')+'</div></div><div class="dim availability-note">Dados do relatório público da ESPN. “Fora” indica status Out; “Improvável” e “Dúvida” não são tratados como ausência confirmada. Consultado '+updated.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.</div></div>';
+}
 /* --- NBA: box score com todos os mercados de jogador --- */
 function parseNbaPlayers(sum){
   const out=[];
