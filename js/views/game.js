@@ -597,93 +597,71 @@ const fmtML = v => v==null?'-':(v>0?'+':'')+v+` (${(v<0?1+100/-v:1+v/100).toFixe
 function wpChart(m,wp){
   const W=720,H=230,pad=12;
   const points=(wp||[]).map((p,i)=>{
-    const raw=num(p.homeWinPercentage);
-    if(raw==null) return null;
+    const raw=num(p.homeWinPercentage); if(raw==null) return null;
     const pct=Math.max(0,Math.min(1,raw>1?raw/100:raw));
     const periodRaw=p.period?.number??p.periodNumber??(typeof p.period==='number'?p.period:null);
     const clock=p.clock?.displayValue??p.clock?.value??p.clock??'';
     const period=periodRaw!=null?Number(periodRaw):null;
-    const hs=num(p.homeScore??p.homeTeamScore??p.score?.home);
-    const as=num(p.awayScore??p.awayTeamScore??p.score?.away);
+    const hs=num(p.homeScore??p.homeTeamScore??p.score?.home),as=num(p.awayScore??p.awayTeamScore??p.score?.away);
     return {p:pct,period,clock:String(clock||''),hs,as,label:clock?String(clock):period?`${period}º período`:`Momento ${i+1}`};
   }).filter(Boolean);
   if(points.length<2) return `<div class="empty">A ESPN ainda não disponibilizou pontos suficientes para montar o gráfico de probabilidade.</div>`;
-  const x=i=>pad+i/(points.length-1)*(W-pad*2);
-  const y=p=>pad+(1-p)*(H-pad*2);
+  const x=i=>pad+i/(points.length-1)*(W-pad*2),y=p=>pad+(1-p)*(H-pad*2);
   const path=points.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.p).toFixed(1)).join(' ');
-  const segments=points.slice(1).map((p,i)=>{
-    const prev=points[i], color=((prev.p+p.p)/2)>=.5?'var(--acc)':'#60a5fa';
-    return `<path d="M ${x(i).toFixed(1)} ${y(prev.p).toFixed(1)} L ${x(i+1).toFixed(1)} ${y(p.p).toFixed(1)}" stroke="${color}" stroke-width="3.5" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke"/>`;
-  }).join('');
-  const last=points[points.length-1].p;
-  const max=Math.max(...points.map(p=>p.p)),min=Math.min(...points.map(p=>p.p));
-  const series=encodeURIComponent(JSON.stringify(points));
-  const teamHome=esc(m.home.short),teamAway=esc(m.away.short);
+  const segments=points.slice(1).map((p,i)=>{const prev=points[i],color=((prev.p+p.p)/2)>=.5?'var(--acc)':'#60a5fa';return `<path d="M ${x(i).toFixed(1)} ${y(prev.p).toFixed(1)} L ${x(i+1).toFixed(1)} ${y(p.p).toFixed(1)}" stroke="${color}" stroke-width="3.5" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke"/>`;}).join('');
+  const last=points[points.length-1].p,max=Math.max(...points.map(p=>p.p)),min=Math.min(...points.map(p=>p.p));
+  const flips=points.slice(1).filter((p,i)=>(p.p>=.5)!==(points[i].p>=.5)).length;
+  const periods=[...new Set(points.map(p=>p.period).filter(p=>p!=null))].sort((a,b)=>a-b);
+  const periodLabel=n=>m.sk==='nba'?`${n}º quarto`:m.sk==='futebol'?`${n}º tempo`:`Período ${n}`;
+  const periodButtons=periods.length>1?`<div class="wp-periods"><button class="wp-period on" data-period="all">Jogo todo</button>${periods.map(n=>`<button class="wp-period" data-period="${n}">${periodLabel(n)}</button>`).join('')}</div>`:'';
+  const series=encodeURIComponent(JSON.stringify(points)),teamHome=esc(m.home.short),teamAway=esc(m.away.short);
   return `<div class="wp-panel" data-wp-series="${series}" data-wp-home="${teamHome}" data-wp-away="${teamAway}">
     <div class="wp-topline"><span class="wp-live"><i></i>${m.state==='in'?'ACOMPANHAMENTO AO VIVO':m.completed?'ANÁLISE DA PARTIDA':'PRÉ-JOGO'}</span><span class="wp-source">Probabilidade ESPN</span></div>
-    <div class="wp-current">
-      <div class="wp-team"><span class="wp-team-name">${teamHome}</span><strong class="wp-home-value">${Math.round(last*100)}%</strong></div>
-      <div class="wp-vs">CHANCE DE VITÓRIA</div>
-      <div class="wp-team away"><span class="wp-team-name">${teamAway}</span><strong class="wp-away-value">${Math.round((1-last)*100)}%</strong></div>
-    </div>
+    <div class="wp-current"><div class="wp-team"><span class="wp-team-name">${teamHome}</span><strong class="wp-home-value">${Math.round(last*100)}%</strong></div><div class="wp-vs">CHANCE DE VITÓRIA</div><div class="wp-team away"><span class="wp-team-name">${teamAway}</span><strong class="wp-away-value">${Math.round((1-last)*100)}%</strong></div></div>
     <div class="wp-legend"><span><i class="home"></i>${teamHome} · mandante</span><span><i class="away"></i>${teamAway} · visitante</span></div>
-    <div class="wp-plot-wrap">
-      <div class="wp-axis"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div>
+    ${periodButtons}
+    <div class="wp-plot-wrap"><div class="wp-axis"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div>
       <svg class="wp-plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico interativo de probabilidade de vitória">
         ${[0,.25,.5,.75,1].map(v=>`<line x1="${pad}" x2="${W-pad}" y1="${y(v)}" y2="${y(v)}" class="${v===.5?'mid':''}"/>`).join('')}
-        <path d="${path} L ${x(points.length-1)} ${H-pad} L ${x(0)} ${H-pad} Z" class="wp-area"/>
-        ${segments}
+        <path d="${path} L ${x(points.length-1)} ${H-pad} L ${x(0)} ${H-pad} Z" class="wp-area"/>${segments}
         <line class="wp-cursor" id="wpCursorLine" x1="${x(points.length-1)}" x2="${x(points.length-1)}" y1="${pad}" y2="${H-pad}"/>
         <circle class="wp-cursor-dot" id="wpCursorDot" cx="${x(points.length-1)}" cy="${y(last)}" r="6"/>
         <rect class="wp-hitarea" x="${pad}" y="${pad}" width="${W-pad*2}" height="${H-pad*2}"/>
-      </svg>
-      <div class="wp-axis-labels"><span>Início</span><span>Andamento da partida</span><span>Agora / final</span></div>
+      </svg><div class="wp-axis-labels"><span>Início</span><span>Andamento da partida</span><span>Agora / final</span></div>
     </div>
-    <div class="wp-inspector">
-      <div><small>MOMENTO SELECIONADO</small><b class="wp-moment">${esc(points[points.length-1].label)}</b></div>
-      <div class="wp-score"><small>PLACAR REGISTRADO</small><b class="wp-score-value">${points[points.length-1].hs!=null&&points[points.length-1].as!=null?points[points.length-1].hs+' × '+points[points.length-1].as:'Não informado'}</b></div>
-      <div class="wp-inspector-probs"><span>${teamHome} <b class="wp-home-inspect">${Math.round(last*100)}%</b></span><span>${teamAway} <b class="wp-away-inspect">${Math.round((1-last)*100)}%</b></span></div>
-    </div>
+    <div class="wp-inspector"><div><small>MOMENTO SELECIONADO</small><b class="wp-moment">${esc(points[points.length-1].label)}</b></div><div class="wp-score"><small>PLACAR REGISTRADO</small><b class="wp-score-value">${points[points.length-1].hs!=null&&points[points.length-1].as!=null?points[points.length-1].hs+' × '+points[points.length-1].as:'Não informado'}</b></div><div class="wp-inspector-probs"><span>${teamHome} <b class="wp-home-inspect">${Math.round(last*100)}%</b></span><span>${teamAway} <b class="wp-away-inspect">${Math.round((1-last)*100)}%</b></span></div></div>
     <label class="wp-range-label" for="wpRange"><span>Arraste para explorar a partida</span><span class="wp-range-count">${points.length} registros</span></label>
     <input class="wp-range" id="wpRange" type="range" min="0" max="${points.length-1}" value="${points.length-1}" step="1" aria-label="Selecionar momento da partida"/>
-    <div class="wp-extremes"><span>Menor chance de ${teamHome}: <b>${Math.round(min*100)}%</b></span><span>Maior chance: <b>${Math.round(max*100)}%</b></span></div>
+    <div class="wp-summary"><div><small>PICO ${teamHome}</small><b>${Math.round(max*100)}%</b></div><div><small>PICO ${teamAway}</small><b>${Math.round((1-min)*100)}%</b></div><div><small>TROCAS DE FAVORITO</small><b>${flips}</b></div></div>
     <p class="wp-help">Toque em qualquer ponto da linha ou arraste o controle para consultar a probabilidade naquele momento. Os percentuais são estimativas publicadas pela ESPN, não garantias de resultado.</p>
   </div>`;
 }
 function bindWinProbability(root){
   root.querySelectorAll('.wp-panel').forEach(panel=>{
-    if(panel.dataset.bound==='1') return;
-    panel.dataset.bound='1';
-    let points=[];
-    try{points=JSON.parse(decodeURIComponent(panel.dataset.wpSeries||''));}catch(e){return;}
-    if(!points.length) return;
-    const range=panel.querySelector('#wpRange'),svg=panel.querySelector('.wp-plot');
-    const line=panel.querySelector('#wpCursorLine'),dot=panel.querySelector('#wpCursorDot');
-    const W=720,H=230,pad=12;
+    if(panel.dataset.bound==='1') return;panel.dataset.bound='1';
+    let points=[];try{points=JSON.parse(decodeURIComponent(panel.dataset.wpSeries||''));}catch(e){return;}if(!points.length)return;
+    const range=panel.querySelector('#wpRange'),svg=panel.querySelector('.wp-plot'),line=panel.querySelector('#wpCursorLine'),dot=panel.querySelector('#wpCursorDot');
     const update=index=>{
-      const i=Math.max(0,Math.min(points.length-1,Number(index)||0)),p=points[i];
-      const pct=Math.round(p.p*100),x=pad+i/(points.length-1)*(W-pad*2),y=pad+(1-p.p)*(H-pad*2);
+      const i=Math.max(Number(range.min)||0,Math.min(Number(range.max)||points.length-1,Number(index)||0)),p=points[i],pct=Math.round(p.p*100),x=12+i/(points.length-1)*696,y=12+(1-p.p)*206;
       range.value=String(i);
-      panel.querySelector('.wp-home-value').textContent=pct+'%';
-      panel.querySelector('.wp-away-value').textContent=(100-pct)+'%';
-      panel.querySelector('.wp-home-inspect').textContent=pct+'%';
-      panel.querySelector('.wp-away-inspect').textContent=(100-pct)+'%';
+      panel.querySelector('.wp-home-value').textContent=pct+'%';panel.querySelector('.wp-away-value').textContent=(100-pct)+'%';
+      panel.querySelector('.wp-home-inspect').textContent=pct+'%';panel.querySelector('.wp-away-inspect').textContent=(100-pct)+'%';
       panel.querySelector('.wp-moment').textContent=p.label||`Momento ${i+1}`;
       panel.querySelector('.wp-score-value').textContent=p.hs!=null&&p.as!=null?`${p.hs} × ${p.as}`:'Não informado';
-      line.setAttribute('x1',x);line.setAttribute('x2',x);
-      dot.setAttribute('cx',x);dot.setAttribute('cy',y);
-      dot.classList.toggle('away-lead',p.p<.5);
+      line.setAttribute('x1',x);line.setAttribute('x2',x);dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.classList.toggle('away-lead',p.p<.5);
       range.style.setProperty('--wp-progress',(i/(points.length-1)*100)+'%');
     };
+    const setPeriod=period=>{
+      const indexes=points.map((p,i)=>period==='all'||String(p.period)===String(period)?i:-1).filter(i=>i>=0);if(!indexes.length)return;
+      range.min=String(indexes[0]);range.max=String(indexes[indexes.length-1]);update(indexes[indexes.length-1]);
+      panel.querySelectorAll('.wp-period').forEach(b=>b.classList.toggle('on',b.dataset.period===String(period)));
+    };
     range.addEventListener('input',()=>update(range.value));
-    svg.addEventListener('pointerdown',e=>{
-      const r=svg.getBoundingClientRect(),ratio=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
-      update(Math.round(ratio*(points.length-1)));
-    });
+    svg.addEventListener('pointerdown',e=>{const r=svg.getBoundingClientRect(),ratio=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),lo=Number(range.min),hi=Number(range.max);update(Math.round(lo+ratio*(hi-lo)));});
+    panel.querySelectorAll('.wp-period').forEach(b=>b.addEventListener('click',()=>setPeriod(b.dataset.period)));
     update(points.length-1);
   });
 }
-
 /* --- Histórico de confrontos --- */
 function h2hSection(m,sum){
   let h='';
