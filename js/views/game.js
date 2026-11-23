@@ -26,7 +26,7 @@ async function pregameMarketsSection(m,sum){
   const predFav=ph!=null&&pa!=null?(ph>pa?m.home:pa>ph?m.away:null):null;
   const hasOdds=!!(odds&&(odds.hML!=null||odds.aML!=null||odds.spread!=null||odds.ou!=null||odds.dML!=null));
   const hasPred=ph!=null&&pa!=null;
-  const agreement=oddsFav&&predFav?(oddsFav===predFav?'As fontes concordam': 'As fontes divergem'):'Comparação indisponível';
+  const agreement=oddsFav&&predFav?(oddsFav===predFav?'Odds e projeção ESPN concordam': 'Odds e projeção ESPN divergem'):'Comparação indisponível';
   const pct=(v)=>v==null?'—':Math.round(v*100)+'%';
   const marketRows=[
     ['Vencedor / moneyline',oddsFav?oddsFav.short:'Sem odds publicadas',odds?.hML!=null||odds?.aML!=null?m.sk==='futebol'&&pDraw!=null?'1X2 · '+m.home.short+' '+pct(pHome)+' · Empate '+pct(pDraw)+' · '+m.away.short+' '+pct(pAway):m.home.short+' '+pct(pHome)+' · '+m.away.short+' '+pct(pAway):''],
