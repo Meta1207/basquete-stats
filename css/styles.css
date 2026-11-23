@@ -240,3 +240,18 @@ nav.bot button.on:before{content:"";position:absolute;top:8px;width:56px;height:
 
 @media(max-width:480px){.livepill{display:none}.brand>div:nth-child(2){min-width:0}}
 .tab .cnt{background:#ef4444;color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;margin-left:2px}
+
+/* Escalações e disponibilidade NBA */
+.availability-subtitle{font-weight:800;font-size:14px;margin:10px 0 7px;color:var(--txt)}
+.availability-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.availability-team{min-width:0;background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:10px}
+.availability-team .grp{margin:0 0 7px}
+.availability-list{display:flex;flex-direction:column;gap:7px}
+.availability-player{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.availability-player:last-child{border-bottom:0}
+.availability-player>span:first-child{min-width:0}
+.availability-player .tag{flex:none}
+.availability-reason{display:block;margin-top:2px;white-space:normal}
+.availability-note{font-size:11px;margin-top:7px;line-height:1.4}
+.tag.warn{background:rgba(245,158,11,.13);color:#fbbf24}
+@media(max-width:520px){.availability-grid{grid-template-columns:1fr}}
