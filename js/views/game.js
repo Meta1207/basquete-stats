@@ -68,7 +68,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   h += favSection(m, sum);
-  h += pregameMarketsSection(m,sum);
+  h += await pregameMarketsSection(m,sum);
   if(m.sk!=='nba') h += favoriteWinnerCard(m,sum);
   if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += nbaLiveAnalysisSection(m,sum); h += await raceXSection(m); }
   else if(m.sk==='futebol') h += soccerDetail(m,sum);
