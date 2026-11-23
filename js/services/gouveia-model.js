@@ -122,7 +122,6 @@ export async function getGouveiaPrediction(match) {
     const homeProbability = logisticProbability(margin);
     const awayProbability = 1 - homeProbability;
     const total = projectedHome + projectedAway;
-    const confidence = Math.min(90, Math.round(50 + Math.min(home.overall.games, away.overall.games) * 1.6 + Math.abs(margin) * 0.55));
 
     return {
       available: true,
@@ -142,7 +141,6 @@ export async function getGouveiaPrediction(match) {
       projectedTotal: round(total),
       projectedMargin: round(margin),
       favorite: margin >= 0 ? 'home' : 'away',
-      confidence: Math.max(50, confidence),
       sample: { home: home.overall.games, away: away.overall.games },
       method: 'Médias ponderadas dos últimos ' + MAX_GAMES + ' jogos, pontos marcados/sofridos, recorte de mando e vantagem de quadra fixa de ' + HOME_ADVANTAGE + ' pontos.',
       caveat: 'Versão inicial experimental. Não incorpora lesões, escalações confirmadas, descanso, viagens ou ritmo de jogo. Probabilidades ainda precisam de calibração fora da amostra.'
