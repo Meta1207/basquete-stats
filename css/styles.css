@@ -603,3 +603,20 @@ nav.bot button.on:before{
 .nba-winner-track i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#16a34a,#4ade80)}
 .nba-winner-meta{display:flex;justify-content:space-between;gap:8px;margin-top:7px;color:var(--mut);font-size:10px}
 .nba-winner-card>p{font-size:10px;line-height:1.45;color:var(--dim);margin-top:10px}
+
+/* Análise pré-jogo: odds e mercados ESPN disponíveis */
+.pregame-ai-section{border:1px solid rgba(59,130,246,.3);border-radius:15px;padding:13px;background:linear-gradient(145deg,rgba(20,43,76,.52),rgba(7,17,33,.92))}
+.pregame-ai-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pregame-ai-head h4{margin:0;font-size:14px}
+.pregame-ai-head p{font-size:10px;line-height:1.4;color:var(--mut);margin:5px 0 0}
+.pregame-tag{flex:none;font-size:9px;font-weight:900;letter-spacing:.5px;color:#93c5fd;border:1px solid rgba(96,165,250,.35);background:rgba(59,130,246,.1);border-radius:20px;padding:6px 8px}
+.pregame-status{display:inline-flex;margin:11px 0 8px;padding:6px 9px;border-radius:8px;font-size:10px;font-weight:800;background:rgba(148,163,184,.1);color:var(--mut)}
+.pregame-status.agree{background:rgba(34,197,94,.1);color:#4ade80}
+.pregame-status.diff{background:rgba(245,158,11,.1);color:#fbbf24}
+.pregame-market-list{display:flex;flex-direction:column;gap:0}
+.pregame-market-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.pregame-market-row>div{min-width:0}
+.pregame-market-row b{display:block;font-size:11px}
+.pregame-market-row small{display:block;color:var(--dim);font-size:9px;margin-top:3px;line-height:1.4}
+.pregame-market-row strong{font-size:11px;text-align:right;max-width:55%;overflow-wrap:anywhere}
+.pregame-disclaimer{font-size:9px;line-height:1.5;color:var(--dim);margin:9px 0 0}
