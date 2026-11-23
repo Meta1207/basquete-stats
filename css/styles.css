@@ -553,3 +553,42 @@ nav.bot button.on:before{
 .wp-summary>div{padding:9px 6px;border-radius:10px;text-align:center;background:rgba(255,255,255,.035);border:1px solid rgba(100,132,180,.13);min-width:0}
 .wp-summary small{display:block;font-size:8px;letter-spacing:.35px;color:var(--dim);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wp-summary b{display:block;margin-top:4px;font-size:19px;font-family:"Barlow Condensed",sans-serif}
+
+/* Central de análise ao vivo — NBA */
+.nba-live-analysis{display:flex;flex-direction:column;gap:10px}
+.nba-analysis-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+.nba-analysis-heading h4{margin:0;font-size:17px}
+.nba-analysis-heading p{font-size:11px;color:var(--mut);margin-top:4px;line-height:1.4}
+.nba-analysis-tag{flex:none;border:1px solid rgba(34,197,94,.28);background:rgba(34,197,94,.09);color:#4ade80;padding:6px 9px;border-radius:20px;font-size:9px;font-weight:900;letter-spacing:.5px}
+.nba-analysis-card{border:1px solid var(--line);border-radius:15px;padding:12px;background:linear-gradient(145deg,rgba(17,34,61,.75),rgba(7,17,33,.92))}
+.nba-analysis-title{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:900;margin-bottom:10px}
+.nba-analysis-title .ico{color:var(--acc2);width:18px;height:18px}
+.nba-momentum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nba-momentum-team{min-width:0;padding:10px;border-radius:11px;background:rgba(255,255,255,.035)}
+.nba-momentum-team>span{display:block;color:var(--mut);font-size:11px;font-weight:800}
+.nba-momentum-team>b{display:block;font-size:25px;line-height:1.2;margin:4px 0 8px}
+.nba-momentum-team.away{text-align:right}
+.nba-momentum-track{height:7px;border-radius:20px;background:#263a59;overflow:hidden}
+.nba-momentum-track i{display:block;height:100%;background:var(--acc);border-radius:20px}
+.nba-momentum-team.away .nba-momentum-track i{margin-left:auto;background:#60a5fa}
+.nba-momentum-note,.nba-analysis-foot{font-size:10px;color:var(--dim);line-height:1.45;margin-top:9px}
+.nba-run{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;margin-top:9px;border-radius:10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.18)}
+.nba-run span{font-size:9px;font-weight:900;color:#4ade80;letter-spacing:.5px}
+.nba-run b{font-size:11px;text-align:right}
+.nba-insight-list{list-style:none;display:grid;gap:8px;padding:0;margin:0}
+.nba-insight-list li{position:relative;padding-left:18px;font-size:12px;line-height:1.5;color:var(--mut)}
+.nba-insight-list li:before{content:"";position:absolute;left:2px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.nba-timeline{display:flex;flex-direction:column}
+.nba-tl-row{display:grid;grid-template-columns:62px 12px minmax(0,1fr);gap:8px;align-items:start;min-height:46px}
+.nba-tl-time{font-size:10px;color:var(--dim);padding-top:2px;text-align:right}
+.nba-tl-mark{width:8px;height:8px;border-radius:50%;background:#64748b;margin:4px auto 0;position:relative}
+.nba-tl-mark:after{content:"";position:absolute;top:9px;bottom:-39px;left:3px;width:2px;background:var(--line)}
+.nba-tl-row:last-child .nba-tl-mark:after{display:none}
+.nba-tl-mark.score{background:var(--acc);box-shadow:0 0 0 3px rgba(255,146,46,.13)}
+.nba-tl-copy{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(100,132,180,.12);min-width:0}
+.nba-tl-copy>div{min-width:0}
+.nba-tl-copy b{display:block;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.nba-tl-copy small{display:block;color:var(--dim);font-size:9px;margin-top:3px}
+.nba-tl-copy>strong{flex:none;font-size:12px;white-space:nowrap;color:var(--acc2)}
+.nba-no-data{padding:10px;border:1px dashed var(--line2);border-radius:10px;color:var(--mut);font-size:11px;line-height:1.5}
+@media(max-width:380px){.nba-analysis-card{padding:10px}.nba-tl-row{grid-template-columns:52px 10px minmax(0,1fr);gap:6px}.nba-run{align-items:flex-start;flex-direction:column}.nba-run b{text-align:left}}
