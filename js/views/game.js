@@ -7,6 +7,7 @@ import { GAMECACHE, bindGames, errBox, gamesList, img, skel } from '../ui/compon
 import { ic, paintIcons } from '../ui/icons.js';
 import { MESC, addDays, esc, fmtDT, fmtDay, fmtTime, num } from '../utils.js';
 import { getTeamSchedule } from '../views/results.js';
+import { getGouveiaPrediction } from '../services/gouveia-model.js';
 
 /* =========================================================
    DETALHE DO JOGO — todos os mercados
@@ -19,25 +20,38 @@ async function pregameMarketsSection(m,sum){
   if(m.state!=='pre') return '';
   const pc=sum?.pickcenter?.[0];
   const odds=m.odds&&(m.odds.hML!=null||m.odds.fav||m.odds.ou!=null||m.odds.spread!=null)?m.odds:(pc?parseOdds(pc,m.home,m.away):m.odds);
-  const pred=sum?.predictor;
-  const ph=num(pred?.homeTeam?.gameProjection),pa=num(pred?.awayTeam?.gameProjection);
+  const espnPred=sum?.predictor;
+  const espnHome=num(espnPred?.homeTeam?.gameProjection),espnAway=num(espnPred?.awayTeam?.gameProjection);
   const pHome=odds?implied(odds.hML):null,pAway=odds?implied(odds.aML):null,pDraw=odds?implied(odds.dML):null;
   const oddsFav=odds?.fav==='home'?m.home:odds?.fav==='away'?m.away:(pHome!=null&&pAway!=null?(pHome>pAway?m.home:pAway>pHome?m.away:null):null);
-  const predFav=ph!=null&&pa!=null?(ph>pa?m.home:pa>ph?m.away:null):null;
   const hasOdds=!!(odds&&(odds.hML!=null||odds.aML!=null||odds.spread!=null||odds.ou!=null||odds.dML!=null));
-  const hasPred=ph!=null&&pa!=null;
-  const agreement=oddsFav&&predFav?(oddsFav===predFav?'Odds e projeção ESPN concordam': 'Odds e projeção ESPN divergem'):'Comparação indisponível';
+  const hasEspnProjection=espnHome!=null&&espnAway!=null;
   const pct=(v)=>v==null?'—':Math.round(v*100)+'%';
+  let model={available:false,reason:'Motor próprio disponível nesta etapa apenas para a NBA.'};
+  if(m.sk==='nba'){
+    try{ model=await getGouveiaPrediction(m); }catch(e){ model={available:false,reason:'Não foi possível calcular a previsão independente.'}; }
+  }
+  const ownUnavailable=model.reason||'Histórico insuficiente para gerar uma previsão responsável.';
+  const ownRows=model.available?[
+    [model.home.name+' '+pct(model.home.winProbability/100),'Probabilidade calculada pelo motor Gouveia'],
+    [m.home.short+' '+(model.projectedMargin>=0?'-':'+')+Math.abs(model.projectedMargin),'Margem projetada; não é linha de aposta'],
+    ['Total projetado '+model.projectedTotal,'Soma dos pontos estimados das duas equipes'],
+    [m.home.short+' '+model.home.points+' · '+m.away.short+' '+model.away.points,'Placar estimado pelo motor Gouveia']
+  ]:[null,null,null,null].map(()=>['Análise indisponível',ownUnavailable]);
   const marketRows=[
-    ['Vencedor / moneyline',oddsFav?oddsFav.short:'Sem odds publicadas',odds?.hML!=null||odds?.aML!=null?m.sk==='futebol'&&pDraw!=null?'1X2 · '+m.home.short+' '+pct(pHome)+' · Empate '+pct(pDraw)+' · '+m.away.short+' '+pct(pAway):m.home.short+' '+pct(pHome)+' · '+m.away.short+' '+pct(pAway):''],
-    ['Handicap / spread',odds?.spread!=null?m.home.short+' '+(odds.spread>0?'+':'')+odds.spread:'Não disponibilizado pela ESPN',odds?.spread!=null?'Linha publicada pela ESPN':'Sem linha para comparar'],
-    ['Total de pontos / gols',odds?.ou!=null?'Linha '+odds.ou:'Não disponibilizado pela ESPN',odds?.ou!=null?'Over / Under':'Sem linha para comparar'],
-    ...(m.sk==='futebol'?[['Empate',pDraw!=null?'Probabilidade '+pct(pDraw):'Não disponibilizado pela ESPN','Mercado 1X2']]:[]),
-    ['Projeção ESPN',hasPred?m.home.short+' '+ph+' · '+m.away.short+' '+pa:'Não disponibilizada','Projeção estatística pré-jogo']
+    ['Vencedor / moneyline',ownRows[0][0],ownRows[0][1],oddsFav?oddsFav.short:'Sem odds publicadas',odds?.hML!=null||odds?.aML!=null?m.home.short+' '+pct(pHome)+' · '+m.away.short+' '+pct(pAway):''],
+    ['Handicap / spread',ownRows[1][0],ownRows[1][1],odds?.spread!=null?m.home.short+' '+(odds.spread>0?'+':'')+odds.spread:'Não disponibilizado pela ESPN',odds?.spread!=null?'Linha publicada pela ESPN':'Sem linha para comparar'],
+    ['Total de pontos',ownRows[2][0],ownRows[2][1],odds?.ou!=null?'Linha '+odds.ou:'Não disponibilizado pela ESPN',odds?.ou!=null?'Over / Under':'Sem linha para comparar'],
+    ['Projeção de pontos',ownRows[3][0],ownRows[3][1],hasEspnProjection?m.home.short+' '+espnHome+' · '+m.away.short+' '+espnAway:'Não disponibilizada','Projeção estatística da ESPN']
   ];
-  const cards=marketRows.map(([name,value,note])=>'<div class="pregame-market-card"><h5>'+esc(name)+'</h5><div class="pregame-compare-grid"><div class="pregame-side own"><small>IA GOUVEIA</small><b>Modelo próprio indisponível</b><span>Previsão independente ainda não implementada</span></div><div class="pregame-side espn"><small>ESPN</small><b>'+esc(String(value))+'</b><span>'+esc(note||'Dado publicado pela fonte')+'</span></div></div></div>').join('');
-  const status=hasOdds&&hasPred?'<span class="pregame-status '+(oddsFav&&predFav?(oddsFav===predFav?'agree':'diff'):'')+'">'+esc(agreement)+'</span>':'<span class="pregame-status">Dados parciais da ESPN</span>';
-  return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Comparação pré-jogo · IA × ESPN</h4><p>Confira os mercados antes do início da partida</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+status+'<div class="pregame-legend"><span>MODELO GOUVEIA</span><span>REFERÊNCIA ESPN</span></div><div class="pregame-market-list">'+cards+'</div><p class="pregame-disclaimer">A coluna ESPN mostra somente dados recebidos da fonte. O modelo preditivo independente Gouveia ainda não foi implementado nesta versão. A coluna não apresenta palpites próprios; nenhum valor é inventado ou copiado para simular uma previsão.</p></div>';
+  const cards=marketRows.map(([name,ownValue,ownNote,sourceValue,sourceNote])=>'<div class="pregame-market-card"><h5>'+esc(name)+'</h5><div class="pregame-compare-grid"><div class="pregame-side own"><small>IA GOUVEIA</small><b>'+esc(String(ownValue))+'</b><span>'+esc(ownNote)+'</span></div><div class="pregame-side espn"><small>ESPN</small><b>'+esc(String(sourceValue))+'</b><span>'+esc(sourceNote||'Dado publicado pela fonte')+'</span></div></div></div>').join('');
+  const modelStatus=model.available
+    ? '<span class="pregame-status agree">Motor Gouveia calculou uma previsão independente</span>'
+    : '<span class="pregame-status">IA Gouveia: '+esc(ownUnavailable)+'</span>';
+  const modelDetails=model.available
+    ? '<div class="pregame-disclaimer"><b>Base da análise:</b> últimos '+model.sample.home+' jogos de '+esc(m.home.short)+' e '+model.sample.away+' de '+esc(m.away.short)+'. '+esc(model.method)+'<br><b>Confiança indicativa:</b> '+model.confidence+'%. '+esc(model.caveat)+'</div>'
+    : '<p class="pregame-disclaimer">'+esc(ownUnavailable)+' A ESPN aparece apenas como referência externa; seus dados não entram no cálculo do motor Gouveia.</p>';
+  return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Análise pré-jogo · Gouveia × ESPN</h4><p>Previsão estatística independente para NBA</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+modelStatus+'<div class="pregame-legend"><span>MODELO GOUVEIA</span><span>REFERÊNCIA ESPN</span></div><div class="pregame-market-list">'+cards+'</div>'+modelDetails+'</div>';
 }
 async function openGame(m, keepScroll=false){
   clearInterval(modalTimer);
