@@ -4,7 +4,7 @@ import { syncTabs } from '../router.js';
 import { S, store } from '../state.js';
 import { ic } from '../ui/icons.js';
 import { MESC, esc, fmtTime } from '../utils.js';
-import { openGame } from '../views/game.js?v=20261124a';
+import { openGame } from '../views/game.js?v=20261124c';
 
 /* =========================================================
    COMPONENTES DE UI
