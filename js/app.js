@@ -3,7 +3,7 @@ import { go } from './router.js';
 import { refreshLiveRows } from './services/live-updater.js';
 import { S } from './state.js';
 import { paintIcons } from './ui/icons.js';
-import { closeModal } from './views/game.js?v=20261123b';
+import { closeModal } from './views/game.js?v=20261124a';
 import { applyTheme } from './views/settings.js';
 
 /* =========================================================
