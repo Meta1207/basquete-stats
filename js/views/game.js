@@ -44,7 +44,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   h += favSection(m, sum);
-  if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += await raceXSection(m); }
+  if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += nbaLiveAnalysisSection(m,sum); h += await raceXSection(m); }
   else if(m.sk==='futebol') h += soccerDetail(m,sum);
   else h += tennisDetail(m,sum);
   h += h2hSection(m,sum);
@@ -226,6 +226,90 @@ function nbaDetail(m,sum){
   }
   return h;
 }
+function nbaLiveAnalysisSection(m,sum){
+  if(m.sk!=='nba') return '';
+  const homeId=String(m.home.id),awayId=String(m.away.id);
+  const rawPlays=Array.isArray(sum?.plays)?sum.plays:
+    Array.isArray(sum?.plays?.items)?sum.plays.items:
+    Array.isArray(sum?.plays?.allPlays)?sum.plays.allPlays:
+    Array.isArray(sum?.scoringPlays)?sum.scoringPlays:[];
+  const teamId=p=>String(p.team?.id||p.teamId||p.competitor?.id||p.team?.uid||'');
+  const clock=p=>String(p.clock?.displayValue||p.clock?.value||p.clock||'').trim();
+  const period=p=>Number(p.period?.number||p.periodNumber||p.period||0)||null;
+  const description=p=>String(p.text||p.description||p.shortDescription||p.type?.text||p.type?.name||p.commentary||p.playText||'').trim();
+  let prevH=null,prevA=null;
+  const events=[];
+  for(const p of rawPlays){
+    const hs=num(p.homeScore??p.homeTeamScore??p.score?.home);
+    const as=num(p.awayScore??p.awayTeamScore??p.score?.away);
+    const tid=teamId(p);
+    let points=num(p.scoreValue??p.points??p.pointsScored),scoringTeam=tid;
+    if(hs!=null&&as!=null){
+      if(prevH!=null&&prevA!=null){
+        const dh=hs-prevH,da=as-prevA;
+        if(dh>0&&da<=0){points=dh;scoringTeam=homeId;}
+        else if(da>0&&dh<=0){points=da;scoringTeam=awayId;}
+        else if(dh>0&&da>0){points=null;scoringTeam='';}
+      }
+      prevH=hs;prevA=as;
+    }
+    const text=description(p);
+    const isScoring=points>0||p.scoringPlay===true||/made.*(three|2.?pt|free throw)|three.point.*made|layup.*made|dunk.*made/i.test(text);
+    if(!isScoring&&hs==null&&!text) continue;
+    const knownTeam=scoringTeam===homeId||scoringTeam===awayId;
+    events.push({team:knownTeam?scoringTeam:'',points:knownTeam&&points>0?points:null,hs,as,clock:clock(p),period:period(p),text:text||(isScoring?'Pontuação registrada':'Evento da partida'),scoring:isScoring});
+  }
+  const scoring=events.filter(e=>e.scoring&&e.team);
+  const recent=scoring.slice(-5),totals={home:0,away:0};
+  recent.forEach(e=>{if(e.team===homeId)totals.home+=e.points||0;else if(e.team===awayId)totals.away+=e.points||0;});
+  let runTeam='',runPoints=0,runPlays=0;
+  for(let i=scoring.length-1;i>=0;i--){
+    const e=scoring[i];if(!runTeam)runTeam=e.team;if(e.team!==runTeam)break;
+    runPoints+=e.points||0;runPlays++;
+  }
+  const hasRecent=recent.length>0;
+  const currentLead=(m.home.score??0)-(m.away.score??0);
+  const leader=currentLead>0?m.home:currentLead<0?m.away:null;
+  const wp=Array.isArray(sum?.winprobability)?sum.winprobability:[];
+  const lastWp=wp.length?num(wp[wp.length-1]?.homeWinPercentage):null;
+  const homePct=lastWp==null?null:Math.round(Math.max(0,Math.min(1,lastWp>1?lastWp/100:lastWp))*100);
+  const awayPct=homePct==null?null:100-homePct;
+  const periodName=n=>n?(n<=4?`${n}º quarto`:`${n-4}ª prorrogação`):'Período não informado';
+  const timeline=events.filter(e=>e.text||e.hs!=null||e.scoring).slice(-7).reverse();
+  const eventRows=timeline.map(e=>{
+    const team=e.team===homeId?m.home.short:e.team===awayId?m.away.short:'';
+    const score=e.hs!=null&&e.as!=null?`${e.hs} × ${e.as}`:'';
+    return `<div class="nba-tl-row"><div class="nba-tl-time">${e.clock?esc(e.clock):periodName(e.period)}</div><div class="nba-tl-mark ${e.scoring?'score':''}"></div><div class="nba-tl-copy"><div><b>${team?esc(team)+' · ':''}${esc(e.text)}</b><small>${e.period?periodName(e.period):e.scoring?'PONTUAÇÃO':'EVENTO'}</small></div>${score?`<strong>${score}</strong>`:''}</div></div>`;
+  }).join('');
+  const insight=[];
+  if(leader) insight.push(`${esc(leader.short)} está à frente por ${Math.abs(currentLead)} ponto${Math.abs(currentLead)===1?'':'s'} no placar atual.`);
+  else if(m.state!=='pre') insight.push('O placar está empatado neste momento.');
+  if(hasRecent){
+    const recentLeader=totals.home>totals.away?m.home:totals.away>totals.home?m.away:null;
+    if(recentLeader) insight.push(`${esc(recentLeader.short)} marcou mais pontos nos últimos ${recent.length} lances pontuados identificados (${totals.home} × ${totals.away}).`);
+    else insight.push(`Os últimos ${recent.length} lances pontuados estão equilibrados (${totals.home} × ${totals.away}).`);
+    if(runTeam&&runPlays>=2) insight.push(`${esc(runTeam===homeId?m.home.short:m.away.short)} marcou em sequência nos últimos ${runPlays} lances pontuados consecutivos (${runPoints||'pontuação não detalhada'} pontos identificados).`);
+  }
+  if(homePct!=null) insight.push(`Estimativa de vitória da ESPN: ${homePct}% para ${esc(m.home.short)} e ${awayPct}% para ${esc(m.away.short)}.`);
+  const totalRecent=totals.home+totals.away;
+  const homeWidth=totalRecent?totals.home/totalRecent*100:50,awayWidth=totalRecent?totals.away/totalRecent*100:50;
+  const momentum=hasRecent?`<div class="nba-momentum-grid">
+      <div class="nba-momentum-team"><span>${esc(m.home.short)}</span><b>${totals.home}</b><div class="nba-momentum-track"><i style="width:${homeWidth}%"></i></div></div>
+      <div class="nba-momentum-team away"><span>${esc(m.away.short)}</span><b>${totals.away}</b><div class="nba-momentum-track"><i style="width:${awayWidth}%"></i></div></div>
+    </div><div class="nba-momentum-note">Pontos identificados nos últimos ${recent.length} lances pontuados disponíveis no feed — não representa uma previsão.</div>
+    ${runTeam&&runPlays>=2?`<div class="nba-run"><span>SEQUÊNCIA ATUAL</span><b>${esc(runTeam===homeId?m.home.short:m.away.short)} · ${runPoints||runPlays} pontos em ${runPlays} lances</b></div>`:''}`
+    :`<div class="nba-no-data">A fonte ainda não disponibilizou lances pontuados suficientes para calcular o momentum. O painel será preenchido quando esses dados estiverem disponíveis.</div>`;
+  const summary=insight.length?`<ul class="nba-insight-list">${insight.map(x=>`<li>${x}</li>`).join('')}</ul>`:`<div class="nba-no-data">Ainda não há dados suficientes para uma leitura automática desta partida.</div>`;
+  const timelineHtml=eventRows?`<div class="nba-timeline">${eventRows}</div>`:`<div class="nba-no-data">A linha do tempo de jogadas não foi publicada pela fonte para esta partida.</div>`;
+  return `<div class="section nba-live-analysis">
+    <div class="nba-analysis-heading"><div><h4>${ic('activity')}Central de análise ao vivo</h4><p>Indicadores calculados somente com os dados disponíveis da ESPN</p></div><span class="nba-analysis-tag">${m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO'}</span></div>
+    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('zap')}Momentum · últimos lances</div>${momentum}</div>
+    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('brain')}Leitura automática da partida</div>${summary}</div>
+    <div class="nba-analysis-card"><div class="nba-analysis-title">${ic('history')}Linha do tempo · principais registros</div>${timelineHtml}</div>
+    <div class="nba-analysis-foot">A leitura é descritiva, não preditiva. Jogadas, placares e probabilidades podem não estar disponíveis em todas as partidas; dados ausentes não são estimados.</div>
+  </div>`;
+}
+
 /* --- Corrida X: análise da pontuação inicial com base nos últimos jogos --- */
 async function raceXSection(m){
   if(m.sk!=='nba') return '';
