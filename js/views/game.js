@@ -9,6 +9,7 @@ import { MESC, addDays, esc, fmtDT, fmtDay, fmtTime, num } from '../utils.js';
 import { getTeamSchedule } from '../views/results.js';
 import { getGouveiaPrediction } from '../services/gouveia-model.js?v=20261124b';
 import { getGouveiaPlayerProjections } from '../services/gouveia-player-model.js?v=20261124a';
+import { soccerVisualCharts } from './soccer-visuals.js?v=20261124g';
 
 /* =========================================================
    DETALHE DO JOGO — todos os mercados
@@ -99,7 +100,7 @@ async function openGame(m, keepScroll=false){
   h += await pregameMarketsSection(m,sum);
   if(m.sk!=='nba') h += favoriteWinnerCard(m,sum);
   if(m.sk==='nba') { h += await nbaAvailabilitySection(m,sum); h += nbaDetail(m,sum); h += nbaLiveAnalysisSection(m,sum); h += await raceXSection(m); }
-  else if(m.sk==='futebol') h += soccerDetail(m,sum);
+  else if(m.sk==='futebol') h += soccerVisualCharts(m,sum) + soccerDetail(m,sum);
   else h += tennisDetail(m,sum);
   h += h2hSection(m,sum);
   gd.innerHTML = h || `<div class="empty">Detalhes indisponíveis para esta partida.</div>`;
