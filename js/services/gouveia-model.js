@@ -61,7 +61,7 @@ function teamHistory(games, team, venue) {
   }).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, MAX_GAMES);
 }
 
-function summarizeTeam(games, team) {
+function summarizeTeam(games, team, referenceDate) {
   const all = teamHistory(games, team);
   const home = teamHistory(games, team, 'home');
   const away = teamHistory(games, team, 'away');
@@ -80,7 +80,7 @@ function summarizeTeam(games, team) {
     return { games: list.length, pointsFor: pf, pointsAgainst: pa, margin, marginStd };
   };
   const latest = all[0]?.date ? new Date(all[0].date) : null;
-  const daysSinceLast = latest ? Math.max(0, (new Date(games[0]?.date || Date.now()).getTime() - latest.getTime()) / 86400000) : null;
+  const daysSinceLast = latest ? Math.max(0, (new Date(referenceDate).getTime() - latest.getTime()) / 86400000) : null;
   return {
     overall: stats(all),
     home: stats(home),
@@ -150,8 +150,8 @@ export async function getGouveiaPrediction(match) {
   }
   try {
     const games = await loadHistory(match.date);
-    const home = summarizeTeam(games, match.home);
-    const away = summarizeTeam(games, match.away);
+    const home = summarizeTeam(games, match.home, match.date);
+    const away = summarizeTeam(games, match.away, match.date);
     if (home.overall.games < MIN_GAMES || away.overall.games < MIN_GAMES) {
       return {
         available: false,
