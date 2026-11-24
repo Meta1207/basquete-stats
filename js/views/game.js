@@ -7,7 +7,7 @@ import { GAMECACHE, bindGames, errBox, gamesList, img, skel } from '../ui/compon
 import { ic, paintIcons } from '../ui/icons.js';
 import { MESC, addDays, esc, fmtDT, fmtDay, fmtTime, num } from '../utils.js';
 import { getTeamSchedule } from '../views/results.js';
-import { getGouveiaPrediction } from '../services/gouveia-model.js';
+import { getGouveiaPrediction } from '../services/gouveia-model.js?v=20261124b';
 
 /* =========================================================
    DETALHE DO JOGO — todos os mercados
