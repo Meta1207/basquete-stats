@@ -52,7 +52,7 @@ async function pregameMarketsSection(m,sum){
     ? '<span class="pregame-status agree">Motor Gouveia calculou uma previsão independente</span>'
     : '<span class="pregame-status">IA Gouveia: '+esc(ownUnavailable)+'</span>';
   const modelDetails=model.available
-    ? '<div class="pregame-disclaimer"><b>Base da análise:</b> últimos '+model.sample.home+' jogos de '+esc(m.home.short)+' e '+model.sample.away+' de '+esc(m.away.short)+'. '+esc(model.method)+'<br>'+esc(model.caveat)+'</div>'
+    ? '<div class="pregame-disclaimer"><b>Confiança do modelo:</b> '+esc(model.confidence?.label||'Não calculada')+' ('+(model.confidence?.score??'—')+'/100). '+esc(model.confidence?.reason||'')+'<br><b>Base da análise:</b> últimos '+model.sample.home+' jogos de '+esc(m.home.short)+' e '+model.sample.away+' de '+esc(m.away.short)+'. '+esc(model.method)+'<br><b>Fatores:</b> '+esc((model.signals||[]).join(' · '))+'<br>'+esc(model.caveat)+'</div>'
     : '<p class="pregame-disclaimer">'+esc(ownUnavailable)+' A ESPN aparece apenas como referência externa; seus dados não entram no cálculo do motor Gouveia.</p>';
   return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Análise pré-jogo · Gouveia × ESPN</h4><p>Previsão estatística independente para NBA</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+modelStatus+'<div class="pregame-legend"><span>MODELO GOUVEIA</span><span>REFERÊNCIA ESPN</span></div><div class="pregame-market-list">'+cards+'</div>'+modelDetails+'</div>';
 }
