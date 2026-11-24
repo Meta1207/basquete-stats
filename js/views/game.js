@@ -175,14 +175,13 @@ function pointByPointSection(m,sum){
       return '<div class="pbp-row"><span class="pbp-lead-slot">'+(homeLead?leadTag:'')+'</span><span class="pbp-score '+(r.scorer==='home'?'home-score':'')+'">'+r.hs+'</span><span class="pbp-dash">–</span><span class="pbp-score '+(r.scorer==='away'?'away-score':'')+'">'+r.as+'</span><span class="pbp-lead-slot">'+(awayLead?leadTag:'')+'</span><small class="pbp-clock">'+esc(r.clock)+'</small>'+(r.description?'<span class="pbp-description">'+esc(r.description)+'</span>':'')+'</div>';
     }).join('')+'</div>';
   };
-  return '<div class="section pbp-section"><div class="pbp-heading"><div><h4>'+ic('list')+'Ponto a Ponto</h4><p>Placar após cada pontuação · vantagem atual da equipe à frente</p></div><span class="tag">ESPN</span></div><div class="pbp-quarters">'+quarters.map(q=>'<button type="button" class="pbp-quarter '+(q===first?'on':'')+'" data-pbp-quarter="'+q+'">'+q+'º QUARTO</button>').join('')+'</div><div class="pbp-content">'+(available?renderRows(first):'<div class="pbp-empty">Histórico ponto a ponto indisponível para esta partida.</div>')+'</div><p class="pbp-note">Sequência baseada nas jogadas disponibilizadas pela ESPN. +X representa a diferença de pontos no placar naquele momento.</p><script type="application/json" class="pbp-data">'+esc(JSON.stringify(rows))+'</script></div>';
+  return '<div class="section pbp-section"><div class="pbp-heading"><div><h4>'+ic('list')+'Ponto a Ponto</h4><p>Placar após cada pontuação · vantagem atual da equipe à frente</p></div><span class="tag">ESPN</span></div><div class="pbp-quarters">'+quarters.map(q=>'<button type="button" class="pbp-quarter '+(q===first?'on':'')+'" data-pbp-quarter="'+q+'">'+q+'º QUARTO</button>').join('')+'</div><div class="pbp-content">'+(available?renderRows(first):'<div class="pbp-empty">Histórico ponto a ponto indisponível para esta partida.</div>')+'</div><p class="pbp-note">Sequência baseada nas jogadas disponibilizadas pela ESPN. +X representa a diferença de pontos no placar naquele momento.</p>data-pbp-series="'+encodeURIComponent(JSON.stringify(rows))+'"</div>';
 }
 function bindPointByPoint(root){
   root.querySelectorAll('.pbp-section').forEach(section=>{
     if(section.dataset.bound==='1') return;
     section.dataset.bound='1';
-    const data=section.querySelector('.pbp-data');
-    let rows=[];try{rows=JSON.parse(data?.textContent||'[]');}catch(e){}
+    let rows=[];try{rows=JSON.parse(decodeURIComponent(section.dataset.pbpSeries||'%5B%5D'));}catch(e){}
     const content=section.querySelector('.pbp-content');
     const render=q=>{
       const list=rows.filter(r=>r.period===q);
