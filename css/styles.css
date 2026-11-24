@@ -631,3 +631,30 @@ nav.bot button.on:before{
 .pregame-side small{font-size:8px;font-weight:900;letter-spacing:.5px;color:var(--dim)}
 .pregame-side b{font-size:12px;line-height:1.35;overflow-wrap:anywhere}
 .pregame-side span{font-size:9px;color:var(--mut);line-height:1.35}
+
+/* Mercado NBA — Ponto a Ponto */
+.pbp-section{padding-top:4px}
+.pbp-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.pbp-heading h4{display:flex;align-items:center;gap:8px;margin:0;font-size:17px}
+.pbp-heading h4 .ico{color:var(--acc)}
+.pbp-heading p{font-size:11px;line-height:1.4;color:var(--mut);margin-top:5px}
+.pbp-quarters{display:flex;gap:7px;overflow-x:auto;padding:2px 0 11px;scrollbar-width:none}
+.pbp-quarters::-webkit-scrollbar{display:none}
+.pbp-quarter{flex:none;padding:10px 13px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);font-size:11px;font-weight:900;letter-spacing:.25px;color:var(--mut)}
+.pbp-quarter.on{background:var(--acc);border-color:var(--acc);color:#07101d;box-shadow:0 5px 16px var(--accGlow)}
+.pbp-list{border-top:1px solid var(--line)}
+.pbp-row{display:grid;grid-template-columns:58px minmax(35px,1fr) 14px minmax(35px,1fr) 58px;align-items:center;gap:5px;min-height:58px;padding:7px 5px;border-bottom:1px solid var(--line);position:relative}
+.pbp-lead-slot{display:flex;align-items:center;justify-content:center;min-width:0}
+.pbp-lead{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:4px 5px;border:1px solid currentColor;border-radius:7px;font-size:13px;font-weight:900;font-family:"Barlow Condensed",sans-serif}
+.pbp-lead.home{color:#22c55e}
+.pbp-lead.away{color:#f43f5e}
+.pbp-lead.tie{color:var(--mut);font-size:9px}
+.pbp-score{text-align:center;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:27px;line-height:1;font-weight:900;color:var(--txt)}
+.pbp-score.home-score{color:var(--acc)}
+.pbp-score.away-score{color:#60a5fa}
+.pbp-dash{text-align:center;font-size:22px;color:var(--mut);font-weight:700}
+.pbp-clock{grid-column:1/-1;text-align:center;color:var(--dim);font-size:9px;margin-top:-2px}
+.pbp-description{grid-column:1/-1;text-align:center;color:var(--mut);font-size:10px;line-height:1.35;overflow-wrap:anywhere}
+.pbp-empty{padding:15px 12px;border:1px dashed var(--line2);border-radius:12px;color:var(--mut);font-size:12px;line-height:1.5;text-align:center}
+.pbp-note{font-size:10px;line-height:1.45;color:var(--dim);margin-top:10px}
+@media(max-width:380px){.pbp-row{grid-template-columns:49px minmax(30px,1fr) 12px minmax(30px,1fr) 49px;gap:3px;padding:7px 2px}.pbp-lead{min-width:37px;font-size:12px}.pbp-score{font-size:25px}.pbp-quarter{padding:9px 11px;font-size:10px}}
