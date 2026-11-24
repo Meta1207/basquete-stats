@@ -51,17 +51,27 @@ function soccerVisualCharts(m,sum){
     if(!['goal','red','yellow','sub','corner','shot','save','penalty','offside','foul'].includes(type.key)) return null;
     return {teamId,side:teamId===homeId?'home':teamId===awayId?'away':'',type,minute,clock,text,athlete,index};
   }).filter(Boolean).sort((a,b)=>(a.minute??999)-(b.minute??999));
-  // Linha do tempo factual: somente eventos publicados com minuto e equipe identificáveis.
-  const timeMarks=[0,15,30,45,60,75,90].map(minute=>'<span style="left:'+(minute/90*100)+'%">'+(minute===45?'INT':minute+"'")+'</span>').join('');
-  const plotted=events.filter(e=>e.minute!=null&&e.side);
-  const timelineMarkers=plotted.map((e,i)=>{
-    const left=Math.max(0,Math.min(100,e.minute/90*100));
-    const lane=e.side==='home'?'home':'away';
-    const icons={goal:'⚽',penalty:'⚽',red:'🟥',yellow:'🟨',sub:'🔁',corner:'🚩',shot:'🎯',save:'🧤',offside:'🚩',foul:'⚑'};
-    const icon=icons[e.type.key]||'•';
-    return '<span class="gpf-tick '+lane+'" style="left:'+left+'%;--tick:'+((i%3)-1)+'" title="'+esc(e.clock+' · '+e.type.label+' · '+e.text)+'">'+icon+'</span>';
+  // Gráfico de áreas: frequência dos eventos realmente registrados por equipe e faixa de 5 minutos.
+  const plotted=events.filter(e=>e.minute!=null&&e.side&&e.minute<=90);
+  const bins=18, homeBins=Array(bins).fill(0), awayBins=Array(bins).fill(0);
+  plotted.forEach(e=>{const ix=Math.min(bins-1,Math.floor(e.minute/5));(e.side==='home'?homeBins:awayBins)[ix]++;});
+  const peak=Math.max(1,...homeBins,...awayBins);
+  const smoothPath=(values,sign)=>{
+    const pts=values.map((v,i)=>[i*(720/(bins-1)),sign*(v/peak*66)]);
+    let d='M 0 0 L 0 '+(105+pts[0][1]);
+    for(let i=0;i<pts.length-1;i++){const mid=(pts[i][0]+pts[i+1][0])/2;d+=' Q '+pts[i][0]+' '+(105+pts[i][1])+' '+mid+' '+(105+(pts[i][1]+pts[i+1][1])/2);}
+    d+=' Q '+pts[pts.length-1][0]+' '+(105+pts[pts.length-1][1])+' 720 '+(105+pts[pts.length-1][1])+' L 720 105 L 0 105 Z';
+    return d;
+  };
+  const homeArea=smoothPath(homeBins,-1),awayArea=smoothPath(awayBins,1);
+  const gridLines=[0,1,2,3].map(i=>'<line x1="0" y1="'+(42+i*42)+'" x2="720" y2="'+(42+i*42)+'" stroke="rgba(255,255,255,.07)" stroke-width="1"/>').join('');
+  const minuteLabels=[0,15,30,45,60,75,90].map(minute=>'<text x="'+(minute/90*720)+'" y="205" fill="#aab3c2" font-size="12" text-anchor="'+(minute===0?'start':minute===90?'end':'middle')+'">'+(minute===45?'INT':minute+"'")+'</text>').join('');
+  const highlightEvents=plotted.filter(e=>['goal','penalty','red','yellow'].includes(e.type.key)).map(e=>{
+    const x=e.minute/90*720, color=e.side==='home'?'#57d879':'#8994ff';
+    const mark=e.type.key==='goal'||e.type.key==='penalty'?'⚽':e.type.key==='red'?'🟥':'🟨';
+    return '<g><line x1="'+x+'" y1="16" x2="'+x+'" y2="190" stroke="'+color+'" stroke-opacity=".28" stroke-dasharray="3 5"/><text x="'+x+'" y="13" font-size="13" text-anchor="middle">'+mark+'</text></g>';
   }).join('');
-  const timelineChart='<div class="gpf-timeline-chart"><div class="gpf-lane-labels"><span class="home">'+esc(m.home.short)+'</span><span class="away">'+esc(m.away.short)+'</span></div><div class="gpf-track-wrap"><div class="gpf-lane home"><i></i></div><div class="gpf-lane away"><i></i></div><div class="gpf-ticks">'+timelineMarkers+'</div><div class="gpf-time-axis">'+timeMarks+'</div></div></div>';
+  const flowChart='<div class="gpf-flow-areas"><div class="gpf-flow-side"><b class="home">'+esc(m.home.short)+'</b><b class="away">'+esc(m.away.short)+'</b></div><svg viewBox="0 0 720 212" role="img" aria-label="Frequência dos eventos registrados por equipe ao longo da partida" preserveAspectRatio="none">'+gridLines+'<path d="'+homeArea+'" fill="url(#gpfHome)" opacity=".95"/><path d="'+awayArea+'" fill="url(#gpfAway)" opacity=".95"/><defs><linearGradient id="gpfHome" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#45d16d" stop-opacity=".95"/><stop offset="1" stop-color="#45d16d" stop-opacity=".12"/></linearGradient><linearGradient id="gpfAway" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#8792ff" stop-opacity=".12"/><stop offset="1" stop-color="#8792ff" stop-opacity=".95"/></linearGradient></defs><line x1="0" y1="105" x2="720" y2="105" stroke="rgba(255,255,255,.6)" stroke-width="1.4"/>'+highlightEvents+minuteLabels+'</svg></div>';
   const eventRows=events.slice(0,80).map(e=>{
     const team=e.side==='home'?m.home.short:e.side==='away'?m.away.short:'';
     const who=e.athlete?e.athlete+' · ':'';
@@ -85,12 +95,12 @@ function soccerVisualCharts(m,sum){
     '.gpf-panel{background:linear-gradient(180deg,rgba(17,31,53,.7),rgba(5,12,25,.45));border:1px solid var(--line);border-radius:16px;padding:14px;overflow:hidden}'+
     '.gpf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.gpf-head h4{margin:0}.gpf-tag{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--acc);border:1px solid var(--line2);border-radius:20px;padding:5px 8px}'+
     '.gpf-sub{color:var(--mut);font-size:12px;margin:3px 0 12px}.gpf-legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--mut);font-size:12px;margin:8px 0}.gpf-legend span{display:flex;align-items:center;gap:6px}.gpf-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}.gpf-legend .home,.gpf-stat-track .home{background:#e07855}.gpf-legend .away,.gpf-stat-track .away{background:#168fc2}'+
-    '.gpf-timeline-chart{display:flex;gap:10px;margin:16px 0 28px;padding:8px 2px 4px}.gpf-lane-labels{width:54px;flex:0 0 54px;display:flex;flex-direction:column;justify-content:space-around;align-items:flex-start;font-size:10px;font-weight:800;overflow:hidden}.gpf-lane-labels .home{color:#45c96a}.gpf-lane-labels .away{color:#8792ef}.gpf-track-wrap{position:relative;flex:1;min-width:0;padding:3px 0 23px}.gpf-lane{height:43px;position:relative;display:flex;align-items:center}.gpf-lane i{height:2px;width:100%;display:block;background:rgba(145,160,180,.28);border-radius:2px}.gpf-lane.home i{background:linear-gradient(90deg,rgba(69,201,106,.5),rgba(69,201,106,.95))}.gpf-lane.away i{background:linear-gradient(90deg,rgba(135,146,239,.5),rgba(135,146,239,.95))}.gpf-ticks{position:absolute;inset:0 0 23px;pointer-events:none}.gpf-tick{position:absolute;top:0;transform:translate(-50%,calc(19px + var(--tick)*3px));font-size:14px;line-height:20px;width:22px;height:22px;text-align:center;border-radius:7px;background:#202b3b;border:1px solid rgba(255,255,255,.1);box-shadow:0 2px 7px rgba(0,0,0,.2)}.gpf-tick.away{top:43px}.gpf-time-axis{position:absolute;left:0;right:0;bottom:0;height:17px;color:var(--mut);font-size:10px;border-top:1px solid var(--line)}.gpf-time-axis span{position:absolute;transform:translateX(-50%);padding-top:4px}.gpf-time-axis span:first-child{transform:none}.gpf-time-axis span:last-child{transform:translateX(-100%)}'+
+    '.gpf-flow-areas{display:flex;gap:9px;align-items:stretch;margin:14px 0 8px;padding:8px 0 2px}.gpf-flow-side{width:55px;flex:0 0 55px;display:flex;flex-direction:column;justify-content:space-around;font-size:10px;font-weight:800;overflow:hidden}.gpf-flow-side .home{color:#55d77b}.gpf-flow-side .away{color:#929bff}.gpf-flow-areas svg{width:100%;height:auto;min-height:145px;overflow:visible;border-radius:8px;background:linear-gradient(180deg,rgba(69,209,109,.035),rgba(135,146,255,.035))}'+
     '.gpf-timeline{display:grid;gap:7px;margin-top:10px}.gpf-event{display:grid;grid-template-columns:42px 24px minmax(0,1fr);align-items:start;gap:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:rgba(4,10,20,.45)}.gpf-minute{color:var(--acc2);font-weight:800;font-size:12px}.gpf-event-icon{font-size:17px;line-height:1.1}.gpf-event b{display:block;font-size:12px}.gpf-event small{display:block;color:var(--mut);font-size:11px;margin-top:2px;overflow-wrap:anywhere}'+
     '.gpf-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.gpf-stat{padding:10px;border:1px solid var(--line);border-radius:11px;background:rgba(4,10,20,.4);min-width:0}.gpf-stat-title{font-size:11px;color:var(--mut);font-weight:700}.gpf-stat-title span{font-size:15px;margin-right:5px}.gpf-stat-values{display:flex;justify-content:space-between;gap:8px;margin:7px 0;font-size:15px}.gpf-stat-track{display:flex;height:5px;border-radius:8px;overflow:hidden;background:var(--line);gap:2px}.gpf-stat-track i{display:block;height:100%;border-radius:8px}.gpf-note{font-size:11px;color:var(--mut);line-height:1.45;margin-top:10px}.gpf-empty{padding:14px;border:1px dashed var(--line2);border-radius:10px;color:var(--mut);font-size:12px}'+
     '@media(max-width:420px){.gpf-panel{padding:11px}.gpf-stats{gap:6px}.gpf-stat{padding:8px}.gpf-stat-values{font-size:13px}.gpf-event{grid-template-columns:36px 22px minmax(0,1fr);gap:6px}}'+
-    '</style><div class="gpf-head"><div><h4>🕒 Linha do tempo da partida</h4><div class="gpf-sub">Eventos da partida distribuídos cronologicamente</div></div><span class="gpf-tag">'+(m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO')+'</span></div>'+
-    (hasEvents?timelineChart+'<div class="gpf-sub">Cada marcador representa um lance registrado, na faixa da equipe correspondente. Toque ou mantenha pressionado para ver os detalhes.</div>':'<div class="gpf-empty">Ainda não há eventos suficientes publicados para montar a linha do tempo desta partida.</div>')+
+    '</style><div class="gpf-head"><div><h4>📊 Dinâmica de eventos</h4><div class="gpf-sub">Frequência dos lances registrados ao longo do jogo</div></div><span class="gpf-tag">'+(m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO')+'</span></div>'+
+    (hasEvents?flowChart+'<div class="gpf-sub">As áreas mostram a quantidade de eventos registrados em cada intervalo de 5 minutos. Gols e cartões aparecem marcados no minuto correspondente; não representa pressão territorial.</div>':'<div class="gpf-empty">Ainda não há eventos suficientes publicados para montar a linha do tempo desta partida.</div>')+
     '<div class="gpf-head" style="margin-top:16px"><div><h4>📈 Estatísticas comparativas</h4><div class="gpf-sub">Indicadores oficiais do box score</div></div></div>'+
     (availableStats?legend+'<div class="gpf-stats">'+statCards+'</div>':'<div class="gpf-empty">Estatísticas comparativas ainda não disponíveis no box score desta partida.</div>')+
     '<div class="gpf-head" style="margin-top:16px"><div><h4>🧭 Linha do tempo e ícones</h4><div class="gpf-sub">Gols, cartões, substituições, escanteios, finalizações, defesas, impedimentos e faltas</div></div></div>'+
