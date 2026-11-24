@@ -46,7 +46,7 @@ function readRoster(payload) {
 }
 function readGameRows(payload) {
   const events=payload?.events || payload?.seasonTypes?.flatMap(t=>t.categories||[]) || [];
-  const idx={
+  const fullIndex={
     min:fieldIndex(payload,['minutes','MIN']),
     pts:fieldIndex(payload,['points','PTS']),
     reb:fieldIndex(payload,['rebounds','REB']),
@@ -57,8 +57,10 @@ function readGameRows(payload) {
   };
   return events.map(event=>{
     const stats=event.stats||event.statistics||[];
+    // O gamelog ESPN omite DATE/OPP/RESULT do array stats; alinhar pelo tamanho real.
+    const shift=Math.max(0,(payload.labels||payload.names||[]).length-stats.length);
     const get=(key)=>{
-      const i=idx[key];
+      const i=fullIndex[key]-shift;
       if(i<0 || stats[i]==null) return null;
       const value=String(stats[i]);
       if(key==='min') return numeric(value.split(':')[0]);
