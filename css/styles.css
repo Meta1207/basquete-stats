@@ -688,6 +688,17 @@ nav.bot button.on:before{
 .gp-stat-bars .tr .b{background:linear-gradient(90deg,#287bc5,#62bdff)}
 .gp-stat-bars .lbl{font-size:11px;font-weight:700}
 .gp-stat-bars .v{font-size:11px;font-weight:800}
+/* Fluxo de placar NBA — visual inspirado em placares esportivos */
+.gp-flow-wrap{border:1px solid var(--line);border-radius:14px;padding:12px 10px 10px;background:linear-gradient(180deg,rgba(37,185,120,.045),rgba(224,90,103,.035)),var(--bg2)}
+.gp-flow-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 2px 8px;font-size:10px;color:var(--mut)}
+.gp-flow-summary span{display:flex;align-items:center;gap:5px;font-weight:800}
+.gp-flow-summary b{font-size:11px;color:var(--txt);text-align:center}
+.gp-flow-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.gp-flow-dot.home{background:#25b978}.gp-flow-dot.away{background:#e05a67}
+.gp-flow-svg{display:block;width:100%;height:auto;overflow:visible}
+.gp-zero{stroke:rgba(190,205,220,.7);stroke-width:1.4;stroke-dasharray:4 4}
+.gp-period-line{stroke:rgba(160,175,195,.24);stroke-width:1;stroke-dasharray:3 5}
+.gp-flow-caption{display:flex;justify-content:space-between;gap:5px;margin:4px 2px 0;color:var(--mut);font-size:9px}
 .gp-chart-empty{padding:16px 12px;text-align:center;border:1px dashed var(--line);border-radius:12px;color:var(--mut);font-size:12px;line-height:1.5}
 .gp-chart-foot{font-size:10px;line-height:1.45;color:var(--dim);margin:10px 0 0}
 @media(max-width:390px){.gp-legend{gap:8px}.gp-legend b{width:100%;margin-left:0}.gp-stat-bars{padding:10px 7px}}
