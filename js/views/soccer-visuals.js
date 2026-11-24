@@ -51,25 +51,34 @@ function soccerVisualCharts(m,sum){
     if(!['goal','red','yellow','sub','corner','shot','save','penalty','offside','foul'].includes(type.key)) return null;
     return {teamId,side:teamId===homeId?'home':teamId===awayId?'away':'',type,minute,clock,text,athlete,index};
   }).filter(Boolean).sort((a,b)=>(a.minute??999)-(b.minute??999));
-  // Intensidade ofensiva estimada por eventos identificados; não é tracking territorial.
-  const buckets=Array.from({length:36},(_,i)=>({minute:i*2.5,home:0,away:0}));
+  // Fluxo visual por eventos publicados: proxy de atividade, não tracking oficial de pressão.
+  const bins=Array.from({length:60},(_,i)=>({minute:i*1.5,home:0,away:0}));
   const weight={goal:5,penalty:4,shot:3,corner:2,save:2,offside:1.2,foul:.35,yellow:.25,red:.5,sub:0};
   events.forEach(e=>{
     if(e.minute==null||!e.side) return;
-    const idx=Math.min(35,Math.floor(e.minute/2.5));
-    buckets[idx][e.side]+=weight[e.type.key]??0;
+    const center=Math.min(59,Math.floor(e.minute/1.5)), w=weight[e.type.key]??0;
+    if(!w) return;
+    for(let d=-4;d<=4;d++){
+      const idx=center+d;
+      if(idx<0||idx>=60) continue;
+      bins[idx][e.side]+=w*Math.exp(-(d*d)/8);
+    }
   });
-  const max=Math.max(1,...buckets.flatMap(b=>[b.home,b.away]));
-  const bars=buckets.map(b=>{
-    const heightH=b.home/max*84, heightA=b.away/max*84;
-    return '<div class="gpf-bin" title="'+b.minute+'–'+(b.minute+2.5)+' min · '+esc(m.home.short)+' '+b.home.toFixed(1)+' · '+esc(m.away.short)+' '+b.away.toFixed(1)+'"><i class="home" style="height:'+heightH+'px"></i><i class="away" style="height:'+heightA+'px"></i></div>';
-  }).join('');
-  const eventMarkers=events.filter(e=>e.minute!=null&&e.side).map((e,i)=>{
-    const left=Math.max(0,Math.min(100,e.minute/90*100));
-    const top=e.side==='home'?(i%3===0?8:i%3===1?24:40):(i%3===0?57:i%3===1?73:89);
-    return '<span class="gpf-marker '+e.side+'" style="left:'+left+'%;top:'+top+'%" title="'+esc(e.clock+' · '+e.type.label+' · '+e.text)+'">'+e.type.icon+'</span>';
-  }).join('');
+  const peak=Math.max(1,...bins.flatMap(b=>[b.home,b.away]));
+  const makeArea=side=>{
+    const sign=side==='home'?-1:1, base=83, maxH=72;
+    const points=bins.map((b,i)=>[i/(bins.length-1)*720,base+sign*Math.max(0,b[side]/peak*maxH)]);
+    return 'M 0 '+base+' '+points.map(p=>'L '+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ')+' L 720 '+base+' Z';
+  };
+  const homeLogo=String(m.home.logo||''),awayLogo=String(m.away.logo||'');
+  const logoRail='<div class="gpf-team-rail">'+(homeLogo?'<img src="'+esc(homeLogo)+'" alt="'+esc(m.home.short)+'">':'<span>'+esc(m.home.short)+'</span>')+(awayLogo?'<img src="'+esc(awayLogo)+'" alt="'+esc(m.away.short)+'">':'<span>'+esc(m.away.short)+'</span>')+'</div>';
+  const goalMarkers=events.filter(e=>e.type.key==='goal'&&e.minute!=null&&e.side).map(e=>'<span class="gpf-goal" style="left:'+Math.max(0,Math.min(100,e.minute/90*100))+'%" title="'+esc(e.clock+' · '+e.text)+'">⚽</span>').join('');
+  const cardMarkers=events.filter(e=>(e.type.key==='red'||e.type.key==='yellow')&&e.minute!=null&&e.side).map(e=>'<span class="gpf-card" style="left:'+Math.max(0,Math.min(100,e.minute/90*100))+'%" title="'+esc(e.clock+' · '+e.type.label+' · '+e.text)+'">'+(e.type.key==='red'?'🟥':'🟨')+'</span>').join('');
   const timeMarks=[0,15,30,45,60,75,90].map(minute=>'<span style="left:'+(minute/90*100)+'%">'+(minute===45?"45'":minute+"'")+'</span>').join('');
+  const flowChart='<div class="gpf-flow"><div class="gpf-goal-row">'+goalMarkers+'</div><div class="gpf-flow-main">'+logoRail+'<div class="gpf-plot"><svg viewBox="0 0 720 166" preserveAspectRatio="none" role="img" aria-label="Fluxo da partida">'+
+    '<rect x="0" y="0" width="720" height="83" fill="rgba(42,190,75,.22)"/><rect x="0" y="83" width="720" height="83" fill="rgba(72,83,145,.48)"/>'+
+    '<path d="'+makeArea('home')+'" fill="#39c653"/><path d="'+makeArea('away')+'" fill="#343f83"/>'+
+    '<path d="M360 0V166" stroke="rgba(0,0,0,.65)" stroke-width="1.5"/><path d="M0 83H720" stroke="rgba(190,205,215,.22)" stroke-width="1"/></svg><div class="gpf-axis">'+timeMarks+'</div></div></div><div class="gpf-card-row">'+cardMarkers+'</div></div>';
   const eventRows=events.slice(0,80).map(e=>{
     const team=e.side==='home'?m.home.short:e.side==='away'?m.away.short:'';
     const who=e.athlete?e.athlete+' · ':'';
@@ -93,16 +102,16 @@ function soccerVisualCharts(m,sum){
     '.gpf-panel{background:linear-gradient(180deg,rgba(17,31,53,.7),rgba(5,12,25,.45));border:1px solid var(--line);border-radius:16px;padding:14px;overflow:hidden}'+
     '.gpf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.gpf-head h4{margin:0}.gpf-tag{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--acc);border:1px solid var(--line2);border-radius:20px;padding:5px 8px}'+
     '.gpf-sub{color:var(--mut);font-size:12px;margin:3px 0 12px}.gpf-legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--mut);font-size:12px;margin:8px 0}.gpf-legend span{display:flex;align-items:center;gap:6px}.gpf-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}.gpf-legend .home,.gpf-stat-track .home{background:#e07855}.gpf-legend .away,.gpf-stat-track .away{background:#168fc2}'+
-    '.gpf-pressure{position:relative;height:214px;margin:8px 0 24px;overflow:hidden;border:1px solid rgba(120,145,175,.12);border-radius:12px;background:repeating-linear-gradient(to right,transparent 0,transparent calc(16.666% - 1px),rgba(140,160,190,.13) calc(16.666% - 1px),rgba(140,160,190,.13) 16.666%)}.gpf-pressure:before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;background:#64748b;z-index:2}.gpf-pressure-bars{position:absolute;inset:0;display:flex;align-items:center;gap:1px;padding:0 2px}.gpf-bin{height:100%;flex:1;min-width:0;position:relative;z-index:1}.gpf-bin i{position:absolute;left:0;right:0;display:block;min-height:0;border-radius:2px}.gpf-bin .home{bottom:50%;background:#bd765e}.gpf-bin .away{top:50%;background:#087eae}.gpf-markers{position:absolute;inset:0;z-index:3;pointer-events:none}.gpf-marker{position:absolute;transform:translate(-50%,-50%);font-size:13px;line-height:19px;width:20px;height:20px;text-align:center;border-radius:50%;background:#25364a;border:1px solid rgba(255,255,255,.12);box-shadow:0 1px 4px #07111f;white-space:nowrap}.gpf-marker.home{color:#e58b6c}.gpf-marker.away{color:#36b8ed}.gpf-time-axis{position:absolute;left:0;right:0;bottom:-20px;height:18px;color:var(--mut);font-size:10px}.gpf-time-axis span{position:absolute;transform:translateX(-50%)}.gpf-time-axis span:first-child{transform:none}.gpf-time-axis span:last-child{transform:translateX(-100%)}'+
+    '.gpf-flow{margin:8px 0 28px;padding:8px 4px 4px}.gpf-goal-row,.gpf-card-row{height:24px;position:relative;margin-left:48px}.gpf-goal,.gpf-card{position:absolute;transform:translateX(-50%);font-size:16px;line-height:22px}.gpf-card-row{height:20px}.gpf-flow-main{display:flex;align-items:stretch;gap:5px;height:168px}.gpf-team-rail{width:42px;flex:0 0 42px;display:flex;flex-direction:column;justify-content:space-around;align-items:center}.gpf-team-rail img{width:30px;height:30px;object-fit:contain}.gpf-team-rail span{font-size:9px;color:var(--mut);font-weight:800}.gpf-plot{position:relative;flex:1;min-width:0;height:168px}.gpf-plot svg{width:100%;height:100%;display:block}.gpf-axis{position:absolute;left:0;right:0;bottom:-22px;height:18px;color:var(--mut);font-size:10px}.gpf-axis span{position:absolute;transform:translateX(-50%)}.gpf-axis span:first-child{transform:none}.gpf-axis span:last-child{transform:translateX(-100%)}'+
     '.gpf-timeline{display:grid;gap:7px;margin-top:10px}.gpf-event{display:grid;grid-template-columns:42px 24px minmax(0,1fr);align-items:start;gap:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:rgba(4,10,20,.45)}.gpf-minute{color:var(--acc2);font-weight:800;font-size:12px}.gpf-event-icon{font-size:17px;line-height:1.1}.gpf-event b{display:block;font-size:12px}.gpf-event small{display:block;color:var(--mut);font-size:11px;margin-top:2px;overflow-wrap:anywhere}'+
     '.gpf-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.gpf-stat{padding:10px;border:1px solid var(--line);border-radius:11px;background:rgba(4,10,20,.4);min-width:0}.gpf-stat-title{font-size:11px;color:var(--mut);font-weight:700}.gpf-stat-title span{font-size:15px;margin-right:5px}.gpf-stat-values{display:flex;justify-content:space-between;gap:8px;margin:7px 0;font-size:15px}.gpf-stat-track{display:flex;height:5px;border-radius:8px;overflow:hidden;background:var(--line);gap:2px}.gpf-stat-track i{display:block;height:100%;border-radius:8px}.gpf-note{font-size:11px;color:var(--mut);line-height:1.45;margin-top:10px}.gpf-empty{padding:14px;border:1px dashed var(--line2);border-radius:10px;color:var(--mut);font-size:12px}'+
     '@media(max-width:420px){.gpf-panel{padding:11px}.gpf-stats{gap:6px}.gpf-stat{padding:8px}.gpf-stat-values{font-size:13px}.gpf-event{grid-template-columns:36px 22px minmax(0,1fr);gap:6px}}'+
-    '</style><div class="gpf-head"><div><h4>📊 Evolução e pressão da partida</h4><div class="gpf-sub">Atividade ofensiva por faixa de 5 minutos · eventos publicados pela ESPN</div></div><span class="gpf-tag">'+(m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO')+'</span></div>'+
-    (hasEvents?legend+'<div class="gpf-pressure" role="img" aria-label="Indicadores de atividade ofensiva ao longo da partida"><div class="gpf-pressure-bars">'+bars+'</div><div class="gpf-markers">'+eventMarkers+'</div></div><div class="gpf-time-axis">'+timeMarks+'</div><div class="gpf-sub">Mandante acima da linha central · visitante abaixo · intensidade calculada por eventos ofensivos identificados.</div>':'<div class="gpf-empty">A ESPN ainda não disponibilizou eventos com minuto e equipe suficientes para montar a evolução. O gráfico será preenchido quando houver dados.</div>')+
+    '</style><div class="gpf-head"><div><h4>⚽ Fluxo da partida</h4><div class="gpf-sub">Mandante acima · visitante abaixo · lances distribuídos ao longo dos 90 minutos</div></div><span class="gpf-tag">'+(m.state==='in'?'AO VIVO':m.completed?'PÓS-JOGO':'PRÉ-JOGO')+'</span></div>'+
+    (hasEvents?flowChart+'<div class="gpf-sub">Fluxo estimado a partir dos eventos publicados; não representa tracking oficial de pressão.</div>':'<div class="gpf-empty">A ESPN ainda não disponibilizou eventos com minuto e equipe suficientes para montar o fluxo.</div>')+
     '<div class="gpf-head" style="margin-top:16px"><div><h4>📈 Estatísticas comparativas</h4><div class="gpf-sub">Indicadores oficiais do box score</div></div></div>'+
     (availableStats?legend+'<div class="gpf-stats">'+statCards+'</div>':'<div class="gpf-empty">Estatísticas comparativas ainda não disponíveis no box score desta partida.</div>')+
     '<div class="gpf-head" style="margin-top:16px"><div><h4>🧭 Linha do tempo e ícones</h4><div class="gpf-sub">Gols, cartões, substituições, escanteios, finalizações, defesas, impedimentos e faltas</div></div></div>'+
     (hasEvents?'<div class="gpf-timeline">'+eventRows+'</div>':'<div class="gpf-empty">Nenhum lance detalhado foi publicado para esta partida.</div>')+
-    '<p class="gpf-note">Os indicadores são apresentados somente quando existem dados da ESPN. O gráfico reproduz o estilo visual de pressão com intensidade estimada por eventos ofensivos identificados; não representa rastreamento territorial nem uma métrica oficial de pressão. Mapa de calor posicional depende de coordenadas de rastreamento que não estão disponíveis neste feed; por isso não é simulado.</p></section>';
+    '<p class="gpf-note">Os indicadores são apresentados somente quando existem dados da ESPN. O fluxo visual é uma representação estimada a partir dos eventos publicados e não equivale a dados oficiais de tracking ou pressão territorial. Mapa de calor posicional depende de coordenadas de rastreamento que não estão disponíveis neste feed; por isso não é simulado.</p></section>';
 }
 export { soccerVisualCharts };
