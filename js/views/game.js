@@ -184,8 +184,7 @@ function nbaVisualCharts(m,sum){
     const qmarks=[1,2,3,4].map(q=>{const ix=plays.findIndex(p=>p.q===q);return ix<0?'':'<text x="'+x(ix)+'" y="'+(H-8)+'" text-anchor="middle" class="gp-axis">'+q+'ºQ</text>';}).join('');
     evolution='<div class="gp-evo-wrap"><svg class="gp-evo" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Evolução do placar por quarto">'+grid+'<polyline points="'+home+'" class="gp-line-home"/><polyline points="'+away+'" class="gp-line-away"/>'+qmarks+'</svg><div class="gp-legend"><span><i class="gp-dot home"></i>'+esc(m.home.short)+'</span><span><i class="gp-dot away"></i>'+esc(m.away.short)+'</span><b>Último placar: '+plays[plays.length-1].h+' × '+plays[plays.length-1].a+'</b></div></div>';
   }
-  const groups=sum?.boxscore?.players||[];
-  const teams=groups.map(g=>({team:g.team,statistics:(g.statistics||[]).flatMap(s=>s.statistics||[])}));
+  const teams=Array.isArray(sum?.boxscore?.teams)?sum.boxscore.teams:[];
   const ordered=String(teams[0]?.team?.id)===String(m.home.id)?teams:[teams[1],teams[0]];
   const stats=ordered.length===2?teamStatBars(ordered,[
     'fieldGoalPct','threePointFieldGoalPct','freeThrowPct','totalRebounds','assists','turnovers','steals','blocks','pointsInPaint','fastBreakPoints'
