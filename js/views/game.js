@@ -8,6 +8,7 @@ import { ic, paintIcons } from '../ui/icons.js';
 import { MESC, addDays, esc, fmtDT, fmtDay, fmtTime, num } from '../utils.js';
 import { getTeamSchedule } from '../views/results.js';
 import { getGouveiaPrediction } from '../services/gouveia-model.js?v=20261124b';
+import { getGouveiaPlayerProjections } from '../services/gouveia-player-model.js?v=20261124a';
 
 /* =========================================================
    DETALHE DO JOGO — todos os mercados
@@ -32,6 +33,11 @@ async function pregameMarketsSection(m,sum){
     try{ model=await getGouveiaPrediction(m); }catch(e){ model={available:false,reason:'Não foi possível calcular a previsão independente.'}; }
   }
   const ownUnavailable=model.reason||'Histórico insuficiente para gerar uma previsão responsável.';
+  let playerModel={available:false,reason:'Projeções individuais indisponíveis.'};
+  if(m.sk==='nba'){
+    try{ playerModel=await getGouveiaPlayerProjections(m); }
+    catch(e){ playerModel={available:false,reason:'Não foi possível calcular as projeções individuais.'}; }
+  }
   const favoriteTeam=model.available?(model.favorite==='home'?m.home:m.away):null;
   const favoriteProbability=model.available?(model.favorite==='home'?model.home.winProbability:model.away.winProbability):null;
   const marginText=model.available?(model.projectedMargin>=0?m.home.short+' por '+Math.abs(model.projectedMargin):m.away.short+' por '+Math.abs(model.projectedMargin)):'Análise indisponível';
@@ -54,7 +60,10 @@ async function pregameMarketsSection(m,sum){
   const modelDetails=model.available
     ? '<div class="pregame-disclaimer"><b>Confiança do modelo:</b> '+esc(model.confidence?.label||'Não calculada')+' ('+(model.confidence?.score??'—')+'/100). '+esc(model.confidence?.reason||'')+'<br><b>Base da análise:</b> últimos '+model.sample.home+' jogos de '+esc(m.home.short)+' e '+model.sample.away+' de '+esc(m.away.short)+'. '+esc(model.method)+'<br><b>Fatores:</b> '+esc((model.signals||[]).join(' · '))+'<br>'+esc(model.caveat)+'</div>'
     : '<p class="pregame-disclaimer">'+esc(ownUnavailable)+' A ESPN aparece apenas como referência externa; seus dados não entram no cálculo do motor Gouveia.</p>';
-  return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Análise pré-jogo · Gouveia × ESPN</h4><p>Previsão estatística independente para NBA</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+modelStatus+'<div class="pregame-legend"><span>MODELO GOUVEIA</span><span>REFERÊNCIA ESPN</span></div><div class="pregame-market-list">'+cards+'</div>'+modelDetails+'</div>';
+  const playerSection=playerModel.available
+    ? '<div class="gouveia-player-block"><h5>Projeções individuais · jogadores NBA</h5>'+playerModel.teams.map(team=>'<div class="grp">'+esc(team.name)+'</div>'+(team.players.length?'<div class="tw"><table><thead><tr><th>Jogador</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th><th>PRA</th></tr></thead><tbody>'+team.players.slice(0,6).map(p=>'<tr><td><b>'+esc(p.name)+'</b>'+(p.position?' <span class="dim">'+esc(p.position)+'</span>':'')+'</td><td>'+p.projected.min+'</td><td>'+p.projected.pts+'</td><td>'+p.projected.reb+'</td><td>'+p.projected.ast+'</td><td>'+p.projected.three+'</td><td class="hi">'+p.pra+'</td></tr>').join('')+'</tbody></table></div>':'<div class="dim">Sem histórico individual suficiente para esta equipe.</div>')).join('')+'<p class="pregame-disclaimer">'+esc(playerModel.note)+'</p></div>'
+    : '<div class="gouveia-player-block"><h5>Projeções individuais</h5><p class="pregame-disclaimer">'+esc(playerModel.reason||'Dados individuais insuficientes.')+'</p></div>';
+  return '<div class="section pregame-ai-section"><div class="pregame-ai-head"><div><h4>'+ic('brain')+'Análise pré-jogo · Gouveia × ESPN</h4><p>Previsão estatística independente para NBA</p></div><span class="pregame-tag">PRÉ-JOGO</span></div>'+modelStatus+'<div class="pregame-legend"><span>MODELO GOUVEIA</span><span>REFERÊNCIA ESPN</span></div><div class="pregame-market-list">'+cards+'</div>'+modelDetails+playerSection+'</div>';
 }
 async function openGame(m, keepScroll=false){
   clearInterval(modalTimer);
