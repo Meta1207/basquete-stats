@@ -9,7 +9,7 @@ import { MESC, addDays, esc, fmtDT, fmtDay, fmtTime, num } from '../utils.js';
 import { getTeamSchedule } from '../views/results.js';
 import { getGouveiaPrediction } from '../services/gouveia-model.js?v=20261124b';
 import { getGouveiaPlayerProjections } from '../services/gouveia-player-model.js?v=20261124a';
-import { soccerVisualCharts } from './soccer-visuals.js?v=20261124g';
+import { soccerVisualCharts } from './soccer-visuals.js?v=20261124h';
 
 /* =========================================================
    DETALHE DO JOGO — todos os mercados
