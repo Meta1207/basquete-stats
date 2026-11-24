@@ -133,67 +133,38 @@ function periodTable(m,sum){
 }
 function pointByPointSection(m,sum){
   if(m.sk!=='nba') return '';
-  const raw=sum?.plays;
-  const plays=Array.isArray(raw)?raw:Array.isArray(raw?.items)?raw.items:Array.isArray(raw?.plays)?raw.plays:[];
-  if(!plays.length) return `<div class="section pbp-section"><div class="pbp-heading"><h4>${ic('list')}Ponto a Ponto</h4><span class="tag">NBA</span></div><div class="pbp-empty">Histórico ponto a ponto indisponível para esta partida. A ESPN não forneceu a sequência de jogadas.</div></div>`;
-  const readScore=(p,side)=>{
-    const v=side==='home'?(p.homeScore??p.homeTeamScore??p.score?.home??p.competitorScores?.home):(p.awayScore??p.awayTeamScore??p.score?.away??p.competitorScores?.away);
-    return num(v);
-  };
-  const ordered=[...plays].sort((a,b)=>{
-    const x=num(a.sequenceNumber??a.sequence??a.id),y=num(b.sequenceNumber??b.sequence??b.id);
-    return x!=null&&y!=null?x-y:0;
-  });
-  let prevH=0,prevA=0,hasPrev=false;
-  const rows=[];
-  for(const p of ordered){
-    const hs=readScore(p,'home'),as=readScore(p,'away');
-    if(hs==null||as==null) continue;
-    const changed=!hasPrev||hs!==prevH||as!==prevA;
-    if(!changed) continue;
-    const scoring= p.scoringPlay===true || hs>prevH || as>prevA;
-    prevH=hs;prevA=as;hasPrev=true;
-    if(!scoring) continue;
-    const period=num(p.period?.number??p.periodNumber??p.period);
-    if(period==null||period<1) continue;
-    const teamId=String(p.team?.id??p.teamId??'');
-    const scorer=teamId&&teamId===String(m.home.id)?'home':teamId&&teamId===String(m.away.id)?'away':hs>rows.at(-1)?.hs?'home':as>rows.at(-1)?.as?'away':(hs>as?'home':as>hs?'away':'');
-    const lead=hs-as;
-    const clock=p.clock?.displayValue??p.clock?.value??p.clock??'';
-    const description=p.text??p.shortDescription??p.type?.text??p.type?.description??'';
-    rows.push({period,hs,as,lead,scorer,clock:String(clock||''),description:String(description||'')});
-  }
-  const available=rows.length>0;
+  const plays=Array.isArray(sum?.plays)?sum.plays:[];
+  const rows=plays
+    .filter(p=>p?.scoringPlay===true)
+    .map(p=>{
+      const hs=num(p.homeScore),as=num(p.awayScore),period=num(p.period?.number??p.period);
+      if(hs==null||as==null||period==null||period<1) return null;
+      const teamId=String(p.team?.id??p.teamId??'');
+      const scorer=teamId===String(m.home.id)?'home':teamId===String(m.away.id)?'away':'';
+      return {period,hs,as,lead:hs-as,scorer,clock:String(p.clock?.displayValue??p.clock?.value??''),description:String(p.text??p.shortDescription??'')};
+    })
+    .filter(Boolean)
+    .sort((a,b)=>a.period-b.period);
   const quarters=[1,2,3,4];
-  const first=available?rows[0].period:1;
+  const first=rows.length?rows[0].period:1;
   const renderRows=q=>{
     const list=rows.filter(r=>r.period===q);
     if(!list.length) return '<div class="pbp-empty">Nenhuma pontuação registrada neste quarto.</div>';
     return '<div class="pbp-list">'+list.map(r=>{
       const leadTag=r.lead>0?'<span class="pbp-lead home">+'+r.lead+'</span>':r.lead<0?'<span class="pbp-lead away">+'+Math.abs(r.lead)+'</span>':'<span class="pbp-lead tie">EMPATE</span>';
-      const homeLead=r.lead>0,awayLead=r.lead<0;
-      return '<div class="pbp-row"><span class="pbp-lead-slot">'+(homeLead?leadTag:'')+'</span><span class="pbp-score '+(r.scorer==='home'?'home-score':'')+'">'+r.hs+'</span><span class="pbp-dash">–</span><span class="pbp-score '+(r.scorer==='away'?'away-score':'')+'">'+r.as+'</span><span class="pbp-lead-slot">'+(awayLead?leadTag:'')+'</span><small class="pbp-clock">'+esc(r.clock)+'</small>'+(r.description?'<span class="pbp-description">'+esc(r.description)+'</span>':'')+'</div>';
+      return '<div class="pbp-row"><span class="pbp-lead-slot">'+(r.lead>0?leadTag:'')+'</span><span class="pbp-score '+(r.scorer==='home'?'home-score':'')+'">'+r.hs+'</span><span class="pbp-dash">–</span><span class="pbp-score '+(r.scorer==='away'?'away-score':'')+'">'+r.as+'</span><span class="pbp-lead-slot">'+(r.lead<0?leadTag:'')+'</span><small class="pbp-clock">'+esc(r.clock)+'</small><span class="pbp-description">'+esc(r.description)+'</span></div>';
     }).join('')+'</div>';
   };
-  return '<div class="section pbp-section"><div class="pbp-heading"><div><h4>'+ic('list')+'Ponto a Ponto</h4><p>Placar após cada pontuação · vantagem atual da equipe à frente</p></div><span class="tag">ESPN</span></div><div class="pbp-quarters">'+quarters.map(q=>'<button type="button" class="pbp-quarter '+(q===first?'on':'')+'" data-pbp-quarter="'+q+'">'+q+'º QUARTO</button>').join('')+'</div><div class="pbp-content">'+(available?renderRows(first):'<div class="pbp-empty">Histórico ponto a ponto indisponível para esta partida.</div>')+'</div><p class="pbp-note">Sequência baseada nas jogadas disponibilizadas pela ESPN. +X representa a diferença de pontos no placar naquele momento.</p>data-pbp-series="'+encodeURIComponent(JSON.stringify(rows))+'"</div>';
+  return '<div class="section pbp-section"><div class="pbp-heading"><div><h4>'+ic('list')+'Ponto a Ponto</h4><p>Placar após cada pontuação · vantagem atual da equipe à frente</p></div><span class="tag">ESPN</span></div><div class="pbp-quarters">'+quarters.map(q=>'<button type="button" class="pbp-quarter '+(q===first?'on':'')+'" data-pbp-quarter="'+q+'">'+q+'º QUARTO</button>').join('')+'</div>'+quarters.map(q=>'<div class="pbp-content" data-pbp-content="'+q+'" '+(q===first?'':'hidden')+'>'+renderRows(q)+'</div>').join('')+'<p class="pbp-note">Sequência baseada exclusivamente nas jogadas pontuadas disponibilizadas pela ESPN. +X representa a diferença do placar naquele momento.</p></div>';
 }
 function bindPointByPoint(root){
   root.querySelectorAll('.pbp-section').forEach(section=>{
     if(section.dataset.bound==='1') return;
     section.dataset.bound='1';
-    let rows=[];try{rows=JSON.parse(decodeURIComponent(section.dataset.pbpSeries||'%5B%5D'));}catch(e){}
-    const content=section.querySelector('.pbp-content');
-    const render=q=>{
-      const list=rows.filter(r=>r.period===q);
-      if(!list.length){content.innerHTML='<div class="pbp-empty">Nenhuma pontuação registrada neste quarto.</div>';return;}
-      content.innerHTML='<div class="pbp-list">'+list.map(r=>{
-        const leadTag=r.lead>0?'<span class="pbp-lead home">+'+r.lead+'</span>':r.lead<0?'<span class="pbp-lead away">+'+Math.abs(r.lead)+'</span>':'<span class="pbp-lead tie">EMPATE</span>';
-        return '<div class="pbp-row"><span class="pbp-lead-slot">'+(r.lead>0?leadTag:'')+'</span><span class="pbp-score '+(r.scorer==='home'?'home-score':'')+'">'+r.hs+'</span><span class="pbp-dash">–</span><span class="pbp-score '+(r.scorer==='away'?'away-score':'')+'">'+r.as+'</span><span class="pbp-lead-slot">'+(r.lead<0?leadTag:'')+'</span><small class="pbp-clock">'+esc(r.clock||'')+'</small>'+(r.description?'<span class="pbp-description">'+esc(r.description)+'</span>':'')+'</div>';
-      }).join('')+'</div>';
-    };
     section.querySelectorAll('[data-pbp-quarter]').forEach(btn=>btn.addEventListener('click',()=>{
+      const quarter=btn.dataset.pbpQuarter;
       section.querySelectorAll('[data-pbp-quarter]').forEach(b=>b.classList.toggle('on',b===btn));
-      render(Number(btn.dataset.pbpQuarter));
+      section.querySelectorAll('[data-pbp-content]').forEach(panel=>{panel.hidden=panel.dataset.pbpContent!==quarter;});
     }));
   });
 }
