@@ -94,6 +94,7 @@ async function openGame(m, keepScroll=false){
   try{ sum = await getSummary(m); }catch(e){ /* tênis e alguns torneios não têm summary */ }
   let h = periodTable(m, sum);
   if(m.sk==='nba') h += pointByPointSection(m,sum);
+  if(m.sk==='nba') h += nbaVisualCharts(m,sum);
   h += favSection(m, sum);
   h += await pregameMarketsSection(m,sum);
   if(m.sk!=='nba') h += favoriteWinnerCard(m,sum);
@@ -167,6 +168,30 @@ function bindPointByPoint(root){
       section.querySelectorAll('[data-pbp-content]').forEach(panel=>{panel.hidden=panel.dataset.pbpContent!==quarter;});
     }));
   });
+}
+function nbaVisualCharts(m,sum){
+  if(m.sk!=='nba') return '';
+  const plays=(Array.isArray(sum?.plays)?sum.plays:[]).filter(p=>p?.scoringPlay===true)
+    .map(p=>({q:num(p.period?.number),h:num(p.homeScore),a:num(p.awayScore),clock:p.clock?.displayValue||''}))
+    .filter(p=>p.q&&p.h!=null&&p.a!=null).sort((a,b)=>a.q-b.q);
+  let evolution='<div class="gp-chart-empty">A evolução do placar será exibida quando a ESPN disponibilizar as jogadas pontuadas.</div>';
+  if(plays.length){
+    const W=620,H=220,L=42,R=14,T=16,B=34, max=Math.max(10,...plays.map(p=>Math.max(p.h,p.a)))*1.08;
+    const x=i=>L+(plays.length===1?0:i/(plays.length-1))*(W-L-R), y=v=>T+(H-T-B)*(1-v/max);
+    const home=plays.map((p,i)=>x(i).toFixed(1)+','+y(p.h).toFixed(1)).join(' ');
+    const away=plays.map((p,i)=>x(i).toFixed(1)+','+y(p.a).toFixed(1)).join(' ');
+    const grid=[0,.25,.5,.75,1].map(k=>{const v=max*k,yy=y(v);return '<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" class="gp-grid"/><text x="'+(L-8)+'" y="'+(yy+4)+'" text-anchor="end" class="gp-axis">'+Math.round(v)+'</text>';}).join('');
+    const qmarks=[1,2,3,4].map(q=>{const ix=plays.findIndex(p=>p.q===q);return ix<0?'':'<text x="'+x(ix)+'" y="'+(H-8)+'" text-anchor="middle" class="gp-axis">'+q+'ºQ</text>';}).join('');
+    evolution='<div class="gp-evo-wrap"><svg class="gp-evo" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Evolução do placar por quarto">'+grid+'<polyline points="'+home+'" class="gp-line-home"/><polyline points="'+away+'" class="gp-line-away"/>'+qmarks+'</svg><div class="gp-legend"><span><i class="gp-dot home"></i>'+esc(m.home.short)+'</span><span><i class="gp-dot away"></i>'+esc(m.away.short)+'</span><b>Último placar: '+plays[plays.length-1].h+' × '+plays[plays.length-1].a+'</b></div></div>';
+  }
+  const groups=sum?.boxscore?.players||[];
+  const teams=groups.map(g=>({team:g.team,statistics:(g.statistics||[]).flatMap(s=>s.statistics||[])}));
+  const ordered=String(teams[0]?.team?.id)===String(m.home.id)?teams:[teams[1],teams[0]];
+  const stats=ordered.length===2?teamStatBars(ordered,[
+    'fieldGoalPct','threePointFieldGoalPct','freeThrowPct','totalRebounds','assists','turnovers','steals','blocks','pointsInPaint','fastBreakPoints'
+  ]):'';
+  const statsHtml=stats?'<div class="gp-stat-bars">'+stats+'</div>':'<div class="gp-chart-empty">Estatísticas comparativas ainda não disponíveis no box score da ESPN.</div>';
+  return '<div class="section gp-charts"><div class="gp-chart-head"><div><h4>'+ic('activity')+'Evolução da partida</h4><p>Placar acumulado a cada pontuação registrada</p></div><span class="gp-live-tag">'+(m.state==='in'?'AO VIVO':'ESPN')+'</span></div>'+evolution+'<div class="gp-chart-head gp-stat-head"><div><h4>'+ic('chart-no-axes-combined')+'Estatísticas comparativas</h4><p>Comparação entre as duas equipes</p></div></div>'+statsHtml+'<p class="gp-chart-foot">Gráficos baseados exclusivamente nos dados publicados pela ESPN. Indicadores ausentes não são estimados.</p></div>';
 }
 function marketTiles(items){ return `<div class="mk">${items.filter(x=>x&&x[1]!=null&&x[1]!=='').map(([l,v,sub])=>`<div class="tile"><small>${esc(l)}</small><b>${esc(v)}</b>${sub?`<div class="dim" style="font-size:12px">${esc(sub)}</div>`:''}</div>`).join('')}</div>`; }
 function ouGrid(title, value, lines){
